@@ -9,7 +9,7 @@ env:
 - assertVisible: Daftar akun SIAS
 - assertVisible: Jenis akun
 - assertVisible: Nama lengkap
-- assertVisible: Semester sesuai NIM dan periode aktif (7–14)
+- assertVisible: "Semester sesuai NIM dan periode aktif (7\u201314)"
 - openLink: ${BASE_URL}/lupa-password
 - assertVisible: Pemulihan password
 - assertVisible: Ajukan pemulihan

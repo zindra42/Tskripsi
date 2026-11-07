@@ -187,6 +187,20 @@ test("periode Asia/Makassar, NIM panjang/pendek dan batas semester", () => {
   assert.throws(() => validateSettings({ ...defaults, periode_akademik_selesai: "2026-01-01" }));
 });
 
+test("restore mempertahankan arsip persis dan hanya memangkas suffix terminal pada nilai aktif legacy", () => {
+  for (const kind of ["email", "identifier"] as const) {
+    const suffix = kind === "email" ? ".deleted.1770000000" : "_DEL_1770000000";
+    const original = kind === "email" ? "person@example.invalid" : "991123";
+    assert.equal(restoredIdentity(null, original + suffix, kind), original + suffix);
+    assert.equal(restoredIdentity(original + suffix, original, kind), original);
+    assert.equal(restoredIdentity(original + suffix, null, kind), original);
+    assert.equal(restoredIdentity(original + suffix + "text", null, kind), original + suffix + "text");
+    assert.equal(restoredIdentity(original + suffix + ".other", null, kind), original + suffix + ".other");
+    assert.equal(restoredIdentity(null, null, kind), null);
+  }
+  assert.equal(restoredIdentity("person.deleted.123@example.invalid", null, "email"), "person.deleted.123@example.invalid");
+});
+
 test("layanan akun memakai transaksi, database dan sesi sintetis", async (t) => {
   const navigation = mock.module("next/navigation", { exports: { redirect: () => { throw Error("Unexpected redirect"); }, notFound: () => { throw Error("Unexpected notFound"); } } });
   t.after(() => navigation.restore());
@@ -195,6 +209,7 @@ test("layanan akun memakai transaksi, database dan sesi sintetis", async (t) => 
   const { submitProfileRequest, decideProfileRequest, editAccountProfile } = await import("../src/lib/accounts/profile");
   const { registerAccount } = await import("../src/lib/accounts/registration");
   const { saveSettings } = await import("../src/lib/accounts/settings");
+  const { accountTransaction } = await import("../src/lib/accounts/store");
   const globalDb = globalThis as unknown as { siasDatabase?: PrismaClient };
   const previous = globalDb.siasDatabase;
   t.after(() => { globalDb.siasDatabase = previous; });
@@ -270,7 +285,7 @@ test("layanan akun memakai transaksi, database dan sesi sintetis", async (t) => 
     assert.equal(harness.tables.pengguna.find((row) => row.id === 7n)?.email, "user7@example.invalid");
     assert.equal(harness.tables.dosen.find((row) => row.penggunaId === 7n)?.nidn, "99117");
     assert.match(JSON.stringify(harness.tables.logAktivitas[1].detail), /deleted\.1770000000/);
-    assert.match(JSON.stringify(harness.tables.logAktivitas[1].detail), /archive-or-terminal-legacy-suffix-v1/);
+    assert.match(JSON.stringify(harness.tables.logAktivitas[1].detail), /archive-verbatim-or-terminal-active-suffix-v2/);
   });
 
   await t.test("identitas dipakai ulang memblokir restore tanpa perubahan parsial", async () => {
@@ -321,6 +336,45 @@ test("layanan akun memakai transaksi, database dan sesi sintetis", async (t) => 
     await requestPasswordReset("missing@example.invalid");
     assert.equal(harness.tables.passwordResetRequest.length, 1);
     assert.equal(harness.tables.passwordResetRequest[0].tokenHash, null);
+  });
+
+  await t.test("identitas dan token reset tidak cocok ditolak tanpa advisory lock atau perubahan data", async () => {
+    setup();
+    harness.tables.pengguna.find((row) => row.id === 5n)!.statusAkun = "nonaktif";
+    for (const identity of ["missing@example.invalid", admin.email!, lecturer.email!]) {
+      await requestPasswordReset(identity);
+    }
+    const input = { token: "b".repeat(64), password: "passwordBaru123", confirmation: "passwordBaru123" };
+    await assert.rejects(completePasswordReset(input), /Token tidak valid/);
+    harness.tables.passwordResetRequest.push({ id: 91n, penggunaId: 4n, tokenHash: tokenHash(input.token), status: "disetujui", expiresAt: new Date(0) });
+    await assert.rejects(completePasswordReset(input), /kedaluwarsa/);
+    assert.equal(harness.queries.length, 0);
+    assert.equal(harness.tables.logAktivitas.length, 0);
+    assert.equal(harness.tables.passwordResetRequest.length, 1);
+  });
+
+  await t.test("reset memeriksa ulang pemilik identitas setelah menunggu mutasi akun", async () => {
+    setup();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let started!: () => void;
+    const ready = new Promise<void>((resolve) => { started = resolve; });
+    const mutation = accountTransaction(async () => {
+      started();
+      await gate;
+      // Simulate an identity transfer committing while the reset waits for the account lock.
+      harness.tables.pengguna.find((row) => row.id === 4n)!.email = "changed@example.invalid";
+      harness.tables.pengguna.find((row) => row.id === 5n)!.email = student.email;
+    });
+    await ready;
+    const reset = requestPasswordReset(student.email!);
+    try {
+      // Allow the preflight read to finish before the held mutation commits.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    } finally { release(); }
+    await Promise.all([mutation, reset]);
+    assert.equal(harness.tables.passwordResetRequest.length, 0);
+    assert.equal(harness.tables.logAktivitas.length, 0);
   });
 
   await t.test("reset legacy plaintext dan versi autentikasi lama dapat mengajukan persetujuan baru", async () => {
@@ -442,6 +496,61 @@ test("layanan akun memakai transaksi, database dan sesi sintetis", async (t) => 
     await assert.rejects(registerAccount(input), /Email sudah/);
     assert.equal(harness.tables.pengguna.find((row) => row.id === 6n)?.emailArsip, input.email);
     assert.equal(harness.tables.pengguna.find((row) => row.email === input.email)?.statusAkun, "menunggu_persetujuan");
+  });
+
+  await t.test("registrasi membuktikan batas semester 7 dan 14 serta menolak 6, 15, periode dan pilihan salah", async () => {
+    const input = { role: "mahasiswa", nama: "Mahasiswa Batas", email: "boundary@example.invalid", password: "password123", confirmation: "password123", noHp: "081234567890" };
+    for (const item of [
+      { jenis: "ganjil", nim: "23001222", semester: 7, valid: true },
+      { jenis: "genap", nim: "20001222", semester: 14, valid: true },
+      { jenis: "genap", nim: "24001222", semester: 6, valid: false },
+      { jenis: "ganjil", nim: "19001222", semester: 15, valid: false },
+      { jenis: "ganjil", nim: "23001222", semester: 8, valid: false },
+      { jenis: "ganjil", nim: "23001222", semester: 9, valid: false },
+    ]) {
+      setup();
+      harness.tables.pengaturanSistem.push(
+        { kunci: "periode_akademik_mode", nilai: "manual" },
+        { kunci: "periode_akademik_jenis", nilai: item.jenis },
+        { kunci: "periode_akademik_tahun_mulai", nilai: "2026" },
+      );
+      const result = registerAccount({ ...input, nim: item.nim, semester: item.semester });
+      if (item.valid) {
+        await result;
+        assert.equal(harness.tables.mahasiswa.find((row) => row.nim === item.nim)?.semester, item.semester);
+      } else {
+        await assert.rejects(result);
+        assert.ok(!harness.tables.pengguna.some((row) => row.email === input.email));
+        assert.equal(harness.tables.logAktivitas.length, 0);
+      }
+    }
+  });
+
+  await t.test("restore arsip NIDN literal, NIM legacy, dan profil historis nullable tidak mengubah identitas lain", async () => {
+    const archived = fixture(6n, "dosen");
+    archived.deletedAt = new Date(); archived.emailArsip = "archived@example.invalid";
+    archived.dosen!.nidnArsip = "literal_DEL_1770000000"; archived.dosen!.nidn = null;
+    const legacy = fixture(7n); legacy.deletedAt = new Date(); legacy.mahasiswa!.nim += "_DEL_1770000000";
+    const historical = fixture(8n); historical.deletedAt = new Date(); historical.mahasiswa!.nim = null;
+    historical.dosen = { ...lecturer.dosen!, penggunaId: 8n, nidn: null, nidnArsip: null };
+    setup([archived, legacy, historical]);
+    for (const id of [6n, 7n, 8n]) await changeAccountStatus(session(admin), id, "restore", reason, "KONFIRMASI");
+    assert.equal(harness.tables.pengguna.find((row) => row.id === 6n)?.email, archived.emailArsip);
+    assert.equal(harness.tables.dosen.find((row) => row.penggunaId === 6n)?.nidn, archived.dosen!.nidnArsip);
+    assert.equal(harness.tables.mahasiswa.find((row) => row.penggunaId === 7n)?.nim, "22007");
+    assert.equal(harness.tables.mahasiswa.find((row) => row.penggunaId === 8n)?.nim, null);
+    assert.equal(harness.tables.dosen.find((row) => row.penggunaId === 8n)?.nidn, null);
+  });
+
+  await t.test("perubahan peran mempertahankan kedua profil dan menolak pemakaian ulang identitas historis", async () => {
+    setup();
+    await assignRole(session(admin), 4n, { role: "dosen", identifier: "991144" }, reason, "UBAH PERAN");
+    assert.equal(harness.tables.mahasiswa.find((row) => row.penggunaId === 4n)?.nim, student.mahasiswa!.nim);
+    assert.equal(harness.tables.dosen.find((row) => row.penggunaId === 4n)?.nidn, "991144");
+    await assert.rejects(assignRole(session(admin), 5n, { role: "mahasiswa", identifier: student.mahasiswa!.nim }, reason, "UBAH PERAN"), /NIM sudah/);
+    await assignRole(session(admin), 4n, { role: "mahasiswa" }, reason, "UBAH PERAN");
+    assert.equal(harness.tables.dosen.find((row) => row.penggunaId === 4n)?.nidn, "991144");
+    assert.ok(!harness.tables.authSession.some((row) => row.penggunaId === 4n));
   });
 
   await t.test("restore menolak NIDN terpakai dan Kaprodi kedua", async () => {

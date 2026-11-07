@@ -28,9 +28,10 @@ export function canDecideReset(actor: AccountIdentity, target: AccountIdentity) 
 
 // Preserve source values until an explicit restore. The audit stores the transformation.
 export function restoredIdentity(active: string | null, archived: string | null, kind: "email" | "identifier") {
-  const original = archived || active;
-  if (!original) return null;
-  return original.replace(kind === "email" ? /\.deleted\.\d+$/ : /_DEL_\d+$/, "");
+  // Laravel restores archives verbatim; only the old active columns were suffixed.
+  if (archived) return archived;
+  if (!active) return null;
+  return active.replace(kind === "email" ? /\.deleted\.\d+$/ : /_DEL_\d+$/, "");
 }
 
 export function academicPeriod(settings: Record<string, string>, now = new Date()) {

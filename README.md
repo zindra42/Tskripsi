@@ -1,6 +1,6 @@
 # SIAS TypeScript
 
-Fondasi pembangunan ulang SIAS dalam satu aplikasi Next.js App Router dengan TypeScript strict, Tailwind, Prisma, dan PostgreSQL. Repository standalone `Tskripsi` ini memakai source Laravel di `D:/sis/skripsi` sebagai referensi baca perilaku bisnis. Laravel tidak menjadi bagian runtime aplikasi ini.
+Fondasi pembangunan ulang SIAS dalam satu aplikasi Next.js App Router dengan TypeScript strict, Tailwind, Prisma, dan PostgreSQL. Source Laravel di repository sibling `skripsi/` menjadi referensi perilaku bisnis.
 
 ## Runtime dan dependensi
 
@@ -16,7 +16,7 @@ Rujukan resmi tersedia pada [instalasi Next.js](https://nextjs.org/docs/app/gett
 
 ## Setup lokal
 
-Jalankan perintah dari root repository `Tskripsi` yang berisi `package.json`, `src/`, `prisma/`, `tests/`, dan `e2e/`. Tidak ada subfolder aplikasi `sias-ts/`.
+Jalankan perintah dari root repository `Tskripsi/` (atau root worktree tiket).
 
 ```sh
 npm ci
@@ -97,7 +97,7 @@ Schema menambah `bidang_keahlian`, pivot `dosen_keahlian`, `pengaturan_sistem`, 
 
 Pembacaan source lengkap mencakup migration 5 Oktober, 19 Oktober dan cleanup 5 November 2026, model Pengguna/Mahasiswa/Dosen, Register, AccountValidationService, ForgotPassword, AccountApproval, AccountManagement, EditProfile, TambahAkun, KelolaAkun, PenetapanPeran, PengaturanSistem, route dan middleware akun.
 
-Soft delete mengosongkan kredensial aktif dan menyimpan arsip. Status akun sumber tetap terpisah dari `deleted_at`. Restore mencoba arsip terlebih dahulu, kemudian nilai aktif historis, termasuk suffix terminal `.deleted.<angka>` dan `_DEL_<angka>`. Identitas hasil pemulihan diperiksa terhadap seluruh kredensial yang masih ditempati. Audit menyimpan snapshot sebelum/sesudah dan versi transformasi `archive-or-terminal-legacy-suffix-v1`. Konflik membatalkan transaksi penuh. Nilai aktif dan arsip yang berbeda tetap terekam dalam audit.
+Soft delete mengosongkan kredensial aktif dan menyimpan arsip. Status akun sumber tetap terpisah dari `deleted_at`. Restore mengembalikan arsip persis terlebih dahulu, kemudian nilai aktif historis dengan memangkas hanya suffix terminal `.deleted.<angka>` untuk email atau `_DEL_<angka>` untuk NIM/NIDN. Identitas hasil pemulihan diperiksa terhadap seluruh kredensial yang masih ditempati. Audit menyimpan snapshot sebelum/sesudah dan versi transformasi `archive-verbatim-or-terminal-active-suffix-v2`; audit v1 yang sudah tersimpan tetap dipertahankan. Konflik membatalkan transaksi penuh. Nilai aktif dan arsip yang berbeda tetap terekam dalam audit.
 
 Cleanup 5 November memakai query builder dan mengisi `nonaktif`/`deleted_at` pada admin keuangan tanpa event pengarsipan model. Register dan validator pendaftaran masih menerima admin keuangan, route keuangan masih ada, serta KelolaAkun masih dapat memulihkan/mengaktifkannya. TASK-003 mempertahankan operasi identitas tersebut. Menu tambah akun superadmin dan PenetapanPeran mengikuti pilihan mahasiswa/dosen/kaprodi/sekpro yang ditampilkan source. Modul pembayaran berada pada tahap akademik lanjutan.
 
@@ -110,6 +110,22 @@ Setiap mutasi memeriksa Origin. Mutasi publik memakai limiter PostgreSQL fondasi
 Audit dan perubahan bisnis memakai transaksi yang sama. Superadmin juga menghasilkan catatan `log_super_admin`. Sesi dicabut pada reset, perubahan email, status, delete/restore dan penetapan kewenangan. Heartbeat dan timeout sesi fondasi dipertahankan.
 
 Kolom `password_reset_requests.token` mempertahankan data sumber untuk impor. Konsumsi reset baru memakai `token_hash` dan versi autentikasi. Token legacy yang tersimpan plaintext memerlukan permohonan persetujuan baru pada aplikasi ini.
+
+### Perbaikan temuan TASK-008 melalui TASK-010
+
+- **Encoding E2E, cacat terkonfirmasi:** file UTF-8 dibaca runner Windows sebagai mojibake pada en-dash. `accounts-guest.yaml` kini menyimpan assertion teks lengkap dalam scalar YAML double quote dengan escape ASCII `\u2013`. Teks produk dan seluruh 23 langkah tetap sama. Regresi layanan registrasi membuktikan semester 7 dan 14 diterima sesuai NIM/periode manual, serta menolak 6, 15, paritas dan pilihan yang tidak cocok.
+- **Lock, pekerjaan tidak perlu terkonfirmasi:** identitas reset yang tidak cocok, ambigu, tidak aktif atau milik superadmin sebelumnya tetap masuk advisory lock `736427003`. Token reset acak/kedaluwarsa juga melewati hashing dan masuk lock. Preflight kini menolak kasus tersebut sebelum lock; token tidak memenuhi syarat juga ditolak sebelum bcrypt. Pencarian identitas/pemilik dan token diulang di dalam lock. Identity transfer saat menunggu tidak mengarahkan permohonan ke pemilik baru. Registrasi dan reset sejak awal sudah melakukan bcrypt di luar lock. Lock bersama untuk semua mutasi akun, cek aktor/pengguna/sesi, konflik identitas dan transfer Kaprodi tetap dipertahankan; tidak ada klaim pengukuran contention PostgreSQL.
+- **Suffix, cacat arsip terkonfirmasi:** fungsi lama memangkas suffix dari arsip maupun nilai aktif. `skripsi/app/Models/Pengguna.php::restoring` mengembalikan arsip persis, sedangkan migration Laravel `2026_10_05_070000_release_deleted_users_credentials.php` menambahkan suffix ke kolom aktif. Patch memisahkan kedua sumber itu. Regresi mencakup arsip literal dengan penanda mirip suffix, substring nonterminal, NIM/NIDN nullable, konflik email/NIM/NIDN dan profil historis yang tetap tersimpan saat peran berubah. Identitas aktif terminal legacy tetap dipulihkan dengan aturan kompatibilitas sebelumnya; impor tetap perlu memastikan provenance nilai aktif tersebut.
+- **Constraint token, laporan redundansi tidak terbukti:** `AuthSession.tokenHash @id` cocok dengan `auth_sessions_pkey` pada migration `20261107000000_identity_auth`; tidak ada unique index token_hash tambahan di tabel itu. `PasswordResetRequest.tokenHash String? @unique` cocok dengan kolom nullable dan unique index `password_reset_requests_token_hash_key` pada migration `20261107010000_accounts_settings`. Kedua constraint melindungi tabel dan kegunaan berbeda. Unique `token` plaintext juga mempertahankan kontrak legacy pada kolom berbeda. Schema dan SQL tidak diubah.
+- **Cookie/origin, perilaku keamanan yang diharapkan:** produksi menolak `APP_ORIGIN` HTTP. Regresi dengan cookie store/header sintetis membuktikan nama `__Host-sias_session`, `Secure`, `HttpOnly`, `SameSite=Lax`, path `/`, tanpa Domain, cookie sesi biasa tanpa expiry, expiry remember dan atribut penghapusan. Origin hilang/asing, HTTP dan port berbeda ditolak. Deploy harus memakai HTTPS dari browser, proxy mengakhiri TLS, dan `APP_ORIGIN=https://<host-publik>` sesuai origin publik. Untuk HTTP lokal gunakan `npm run dev`, bukan `npm start`; jangan menonaktifkan guard atau menurunkan keamanan cookie. Pengujian ini belum membuktikan penerimaan cookie oleh browser pada deployment HTTPS nyata.
+
+Verifikasi aktual 7 November 2026: `npm ci` (510 paket, nol vulnerability), Prisma generate/validate, lint, typecheck, production build dan 60 test lulus. Empat regresi baru gagal pada source sebelum patch (laporan Node menghitung 5 failure termasuk test induk); sesudah patch semuanya lulus. Adapter transaksi tetap simulasi mutex/rollback dan interleaving, bukan transaksi PostgreSQL nyata.
+
+LSP akhir melaporkan tanpa error untuk `policy.ts`, `reset.ts` dan `tests/session.test.ts`. `management.ts` dan `tests/accounts.test.ts` timeout saat pemeriksaan akhir serta satu retry; test akun sempat memperoleh hasil tanpa error pada pemeriksaan awal. Error readonly `delete NODE_ENV` di test cookie sudah diperbaiki dan file itu memperoleh hasil tanpa error. Tidak mengklaim LSP menyeluruh lulus; typecheck dan build final tetap lulus.
+
+Flow accounts tervalidasi inline: 23 langkah, nol diagnostik. Validator file menolak path worktree tersembunyi dengan `escapes every e2e/ directory`; suite terdeteksi menunjuk checkout utama, sehingga flow accounts yang telah dipatch belum dapat dirun tanpa dukungan worktree runner. Tidak menyalin patch ke checkout utama atau mengulang flow lama yang masih mengandung masalah encoding. Riwayat diperiksa sebelum eksekusi; tidak ada heal accounts baru. Rerun sesudah Merge perlu memakai flow yang telah dipatch. `auth-guest` lulus 18/18 pada development server worktree port 3102 tanpa konfigurasi database/secret (run `eb30b4d0-7b3c-4b69-b2b9-4a7ddff8ac4a`). Ini bukti guard tamu dan pesan layanan tidak tersedia, bukan login berhasil. Pemeriksaan HTTP `/login` dan `/register` menghasilkan 200 dan label semester lengkap tetap ada di HTML.
+
+Server development worktree port 3102 sudah dihentikan setelah verifikasi. Tool `database_*`, termasuk `database_list_sources`, tidak tersedia di sesi TASK-010; status sources terkini tidak dapat dipanggil ulang. Tidak ada koneksi, seed, migrasi atau perubahan database nyata. Concurrency/constraint PostgreSQL, alur pengguna terautentikasi dan cookie browser HTTPS tetap memerlukan environment serta persetujuan data yang sesuai.
 
 ### Verifikasi TASK-003 pada 7 November 2026
 
