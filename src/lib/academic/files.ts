@@ -44,6 +44,16 @@ export async function storeUpload(upload: Upload, folder: string) {
   return relative;
 }
 
+export async function storePrivateUpload(upload: Upload, folder: string) {
+  const relative = `${folder}/${randomUUID()}.${upload.extension}`;
+  const target = safePath(path.join(root(), "private"), relative);
+  await mkdir(path.dirname(target), { recursive: true });
+  const [base, directory] = await Promise.all([realpath(path.join(root(), "private")), realpath(path.dirname(target))]);
+  ensure(directory.startsWith(`${base}${path.sep}`), "Path berkas tidak valid.");
+  await writeFile(target, upload.bytes, { flag: "wx", mode: 0o600 });
+  return relative;
+}
+
 export async function readStoredFile(relative: string, disks = ["private", "public"]) {
   for (const disk of disks) {
     const base = path.join(/* turbopackIgnore: true */ root(), disk);

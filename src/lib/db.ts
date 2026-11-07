@@ -15,3 +15,10 @@ export function database(): PrismaClient {
   }
   return globalDatabase.siasDatabase;
 }
+
+export const prisma = new Proxy({} as PrismaClient, {
+  get: (_target, prop) => {
+    return (database() as unknown as Record<string, unknown>)[prop as string];
+  },
+});
+

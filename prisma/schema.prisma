@@ -67,6 +67,18 @@ model Pengguna {
   signedDocuments DokumenVerifikasi[] @relation("DocumentSigner")
   revokedDocuments DokumenVerifikasi[] @relation("DocumentRevoker")
   notifications Notifikasi[]
+  semproSupervisions PendaftaranSempro[] @relation("SemproSupervisor")
+  examinerAssignments PenugasanPenguji[] @relation("ExaminerAssignment")
+  lecturerConfirmations KonfirmasiJadwalSempro[] @relation("LecturerConfirmation")
+  modifiedSchedules RiwayatJadwalSempro[] @relation("ScheduleModifier")
+  studentAttendances KehadiranSeminar[] @relation("StudentAttendance")
+  addedAttendances KehadiranSeminar[] @relation("AttendanceAdder")
+  rejectedAttendances KehadiranSeminar[] @relation("AttendanceRejecter")
+  studentDispensations DispensasiKehadiranSempro[] @relation("StudentDispensation")
+  decidedDispensations DispensasiKehadiranSempro[] @relation("DispensationDecider")
+  examiner1Decisions BeritaAcara[] @relation("Examiner1Leader")
+  studentRevisions RevisiDokumen[] @relation("StudentRevision")
+  rejectedRevisions RevisiDokumen[] @relation("RevisionRejecter")
 
   @@map("pengguna")
 }
@@ -353,6 +365,8 @@ model PengajuanJudul {
   bidang1 BidangKeahlian? @relation("TitleField1", fields: [bidangKeahlianId], references: [id], onDelete: SetNull)
   bidang2 BidangKeahlian? @relation("TitleField2", fields: [bidangKeahlian2Id], references: [id], onDelete: SetNull)
   bimbingan Bimbingan?
+  sempro PendaftaranSempro?
+  nomorSuratDasar NomorSuratDasar?
   documents DokumenVerifikasi[]
   @@index([idMahasiswa, isDiarsipkan, deletedAt])
   @@index([status, statusDraft])
@@ -508,6 +522,8 @@ model DokumenVerifikasi {
   updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
   pengajuan PengajuanJudul? @relation(fields: [idPengajuan], references: [id], onDelete: Restrict)
   bimbingan Bimbingan? @relation(fields: [idBimbingan], references: [id], onDelete: Restrict)
+  sempro PendaftaranSempro? @relation(fields: [idSempro], references: [id], onDelete: Restrict)
+  jadwalSempro JadwalSempro? @relation(fields: [idJadwal], references: [id], onDelete: Restrict)
   signer Pengguna? @relation("DocumentSigner", fields: [penandatanganUserId], references: [id], onDelete: SetNull)
   revoker Pengguna? @relation("DocumentRevoker", fields: [dicabutOlehId], references: [id], onDelete: SetNull)
   replacement DokumenVerifikasi? @relation("DocumentReplacement", fields: [digantikanOlehId], references: [id], onDelete: SetNull)
@@ -551,4 +567,317 @@ model AcademicReceipt {
   result Json?
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@map("academic_receipts")
+}
+
+// ---------------------------------------------------------------------------
+// SEMINAR PROPOSAL & DOKUMEN TERVERIFIKASI
+// ---------------------------------------------------------------------------
+
+model PendaftaranSempro {
+  id BigInt @id @default(autoincrement())
+  idPengajuan BigInt @unique @map("id_pengajuan")
+  idDosenPembimbingSempro BigInt? @map("id_dosen_pembimbing_sempro")
+  idAcc BigInt? @map("id_acc")
+  statusDraft String @default("draft") @map("status_draft") @db.VarChar(20)
+  statusBerkas String @default("draft") @map("status_berkas") @db.VarChar(30)
+  catatanVerifikasi String? @map("catatan_verifikasi")
+  nFinal Int? @map("n_final")
+  syaratFinal Int? @map("syarat_final")
+  terkumpulFinal Int? @map("terkumpul_final")
+  statusFinal String? @map("status_final") @db.VarChar(50)
+  dikunciPada DateTime? @map("dikunci_pada") @db.Timestamp(0)
+  dispensasiId BigInt? @map("dispensasi_id")
+  tanggalDaftar DateTime? @map("tanggal_daftar") @db.Timestamp(0)
+  tanggalSubmit DateTime? @map("tanggal_submit") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+
+  pengajuan PengajuanJudul @relation(fields: [idPengajuan], references: [id], onDelete: Cascade)
+  pembimbingSempro Pengguna? @relation("SemproSupervisor", fields: [idDosenPembimbingSempro], references: [id], onDelete: SetNull)
+  dispensasiFinal DispensasiKehadiranSempro? @relation("SemproFinalDispensasi", fields: [dispensasiId], references: [id], onDelete: SetNull)
+  checklist ChecklistDokumen[]
+  penguji PenugasanPenguji[]
+  jadwal JadwalSempro?
+  dispensasiList DispensasiKehadiranSempro[] @relation("SemproDispensations")
+  documents DokumenVerifikasi[]
+
+  @@index([statusBerkas])
+  @@index([statusFinal, dikunciPada], map: "idx_sempro_snapshot")
+  @@map("pendaftaran_sempro")
+}
+
+model ChecklistDokumen {
+  id BigInt @id @default(autoincrement())
+  idSempro BigInt? @map("id_sempro")
+  idSidangDaftar BigInt? @map("id_sidang_daftar")
+  nomorItem Int @map("nomor_item") @db.SmallInt
+  namaDokumen String @map("nama_dokumen") @db.VarChar(255)
+  deskripsi String?
+  jenisBentuk String @default("asli") @map("jenis_bentuk") @db.VarChar(20)
+  verifikatorRole String @default("kaprodi") @map("verifikator_role") @db.VarChar(20)
+  filePindaian String? @map("file_pindaian") @db.VarChar(255)
+  statusUnggahan String? @map("status_unggahan") @db.VarChar(50)
+  statusItem String @default("kosong") @map("status_item") @db.VarChar(20)
+  catatanVerifikator String? @map("catatan_verifikator")
+  tenggatPascaSempro DateTime? @map("tenggat_pasca_sempro") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+
+  sempro PendaftaranSempro? @relation(fields: [idSempro], references: [id], onDelete: Cascade)
+
+  @@index([idSempro, nomorItem])
+  @@map("checklist_dokumen")
+}
+
+model PenugasanPenguji {
+  id BigInt @id @default(autoincrement())
+  idDosenPenguji BigInt @map("id_dosen_penguji")
+  idSempro BigInt? @map("id_sempro")
+  idSidangDaftar BigInt? @map("id_sidang_daftar")
+  nomorPenguji Int? @map("nomor_penguji") @db.SmallInt
+  jenis String @default("sempro") @db.VarChar(20)
+  peran String @default("anggota") @db.VarChar(20)
+  statusApproval String @default("menunggu") @map("status_approval") @db.VarChar(20)
+  catatan String?
+  isPengganti Boolean @default(false) @map("is_pengganti")
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+
+  sempro PendaftaranSempro? @relation(fields: [idSempro], references: [id], onDelete: Cascade)
+  dosen Pengguna @relation("ExaminerAssignment", fields: [idDosenPenguji], references: [id], onDelete: Cascade)
+
+  @@index([idSempro, nomorPenguji])
+  @@index([idDosenPenguji, statusApproval])
+  @@map("penugasan_penguji")
+}
+
+model JadwalSempro {
+  id BigInt @id @default(autoincrement())
+  idSempro BigInt? @unique @map("id_sempro")
+  versi Int @default(1) @db.SmallInt
+  tanggal DateTime? @db.Date
+  waktuMulai String? @map("waktu_mulai") @db.VarChar(10)
+  waktuSelesai String? @map("waktu_selesai") @db.VarChar(10)
+  ruang String? @db.VarChar(100)
+  status String @default("draft") @db.VarChar(30)
+  statusKonfirmasiDosen String @default("menunggu") @map("status_konfirmasi_dosen") @db.VarChar(30)
+  statusPelaksanaan String @default("terjadwal") @map("status_pelaksanaan") @db.VarChar(30)
+  diterbitkanAt DateTime? @map("diterbitkan_at") @db.Timestamp(0)
+  revisiUndangan Int @default(0) @map("revisi_undangan")
+  catatan String?
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+
+  sempro PendaftaranSempro? @relation(fields: [idSempro], references: [id], onDelete: Cascade)
+  konfirmasiList KonfirmasiJadwalSempro[]
+  riwayatList RiwayatJadwalSempro[]
+  kehadiranList KehadiranSeminar[]
+  beritaAcara BeritaAcara?
+  documents DokumenVerifikasi[]
+
+  @@index([tanggal, waktuMulai])
+  @@map("jadwal_sempro")
+}
+
+model KonfirmasiJadwalSempro {
+  id BigInt @id @default(autoincrement())
+  jadwalSemproId BigInt @map("jadwal_sempro_id")
+  versi Int @default(1)
+  dosenId BigInt @map("dosen_id")
+  peran String @db.VarChar(20)
+  status String @default("menunggu") @db.VarChar(50)
+  ditetapkanKaprodi Boolean @default(false) @map("ditetapkan_kaprodi")
+  catatan String?
+  usulanJadwal Json? @map("usulan_jadwal")
+  respondedAt DateTime? @map("responded_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+
+  jadwal JadwalSempro @relation(fields: [jadwalSemproId], references: [id], onDelete: Cascade)
+  dosen Pengguna @relation("LecturerConfirmation", fields: [dosenId], references: [id], onDelete: Cascade)
+
+  @@unique([jadwalSemproId, versi, dosenId], map: "konf_jadwal_sempro_versi_dosen_unique")
+  @@map("konfirmasi_jadwal_sempro")
+}
+
+model RiwayatJadwalSempro {
+  id BigInt @id @default(autoincrement())
+  jadwalSemproId BigInt @map("jadwal_sempro_id")
+  versi Int
+  tanggal DateTime? @db.Date
+  jamMulai String? @map("jam_mulai") @db.VarChar(10)
+  jamSelesai String? @map("jam_selesai") @db.VarChar(10)
+  ruang String? @db.VarChar(100)
+  alasanPerubahan String? @map("alasan_perubahan")
+  diubahOlehId BigInt? @map("diubah_oleh")
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+
+  jadwal JadwalSempro @relation(fields: [jadwalSemproId], references: [id], onDelete: Cascade)
+  diubahOleh Pengguna? @relation("ScheduleModifier", fields: [diubahOlehId], references: [id], onDelete: SetNull)
+
+  @@index([jadwalSemproId, versi], map: "idx_riwayat_jadwal_sempro_versi")
+  @@map("riwayat_jadwal_sempro")
+}
+
+model KehadiranSeminar {
+  id BigInt @id @default(autoincrement())
+  idJadwal BigInt @map("id_jadwal")
+  idMahasiswa BigInt @map("id_mahasiswa")
+  pathFoto String? @map("path_foto") @db.VarChar(255)
+  isManual Boolean @default(false) @map("is_manual")
+  ditambahkanOlehId BigInt? @map("ditambahkan_oleh_id")
+  catatanManual String? @map("catatan_manual")
+  waktuAmbil DateTime @default(now()) @map("waktu_ambil") @db.Timestamp(0)
+  status String @default("valid") @db.VarChar(20)
+  idPenolak BigInt? @map("id_penolak")
+  alasanPenolakan String? @map("alasan_penolakan")
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+
+  jadwal JadwalSempro @relation(fields: [idJadwal], references: [id], onDelete: Cascade)
+  mahasiswa Pengguna @relation("StudentAttendance", fields: [idMahasiswa], references: [id], onDelete: Cascade)
+  ditambahkanOleh Pengguna? @relation("AttendanceAdder", fields: [ditambahkanOlehId], references: [id], onDelete: SetNull)
+  penolak Pengguna? @relation("AttendanceRejecter", fields: [idPenolak], references: [id], onDelete: SetNull)
+
+  @@unique([idJadwal, idMahasiswa], map: "uniq_jadwal_mahasiswa_kehadiran")
+  @@index([idMahasiswa, status])
+  @@index([idJadwal, status])
+  @@map("kehadiran_seminar")
+}
+
+model DispensasiKehadiranSempro {
+  id BigInt @id @default(autoincrement())
+  pendaftaranSemproId BigInt @map("pendaftaran_sempro_id")
+  mahasiswaId BigInt @map("mahasiswa_id")
+  alasan String
+  status String @default("menunggu") @db.VarChar(20)
+  diputuskanOleh BigInt? @map("diputuskan_oleh")
+  peranPemutus String? @map("peran_pemutus") @db.VarChar(20)
+  alasanKeputusan String? @map("alasan_keputusan")
+  diputuskanPada DateTime? @map("diputuskan_pada") @db.Timestamp(0)
+  syaratSaatPengajuan Int @default(0) @map("syarat_saat_pengajuan")
+  terkumpulSaatPengajuan Int @default(0) @map("terkumpul_saat_pengajuan")
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+
+  sempro PendaftaranSempro @relation("SemproDispensations", fields: [pendaftaranSemproId], references: [id], onDelete: Cascade)
+  finalSempro PendaftaranSempro[] @relation("SemproFinalDispensasi")
+  mahasiswa Pengguna @relation("StudentDispensation", fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  pemutus Pengguna? @relation("DispensationDecider", fields: [diputuskanOleh], references: [id], onDelete: SetNull)
+
+  @@index([pendaftaranSemproId, status], map: "idx_disp_sempro_status")
+  @@index([mahasiswaId, status], map: "idx_disp_mhs_status")
+  @@map("dispensasi_kehadiran_sempro")
+}
+
+model BeritaAcara {
+  id BigInt @id @default(autoincrement())
+  idJadwal BigInt? @unique @map("id_jadwal")
+  idJadwalSidang BigInt? @map("id_jadwal_sidang")
+  penguji1Id BigInt? @map("penguji_1_id")
+  fileScan String? @map("file_scan") @db.VarChar(255)
+  nilaiPresentasi Decimal? @map("nilai_presentasi") @db.Decimal(5, 2)
+  nilaiPenguasaanMateri Decimal? @map("nilai_penguasaan_materi") @db.Decimal(5, 2)
+  nilaiMetodologi Decimal? @map("nilai_metodologi") @db.Decimal(5, 2)
+  nilaiAlatBantu Decimal? @map("nilai_alat_bantu") @db.Decimal(5, 2)
+  nilaiPenampilan Decimal? @map("nilai_penampilan") @db.Decimal(5, 2)
+  nilaiKelayakanProposal Decimal? @map("nilai_kelayakan_proposal") @db.Decimal(5, 2)
+  nilaiPenguji1 Decimal? @map("nilai_penguji_1") @db.Decimal(5, 2)
+  nilaiPenguji2 Decimal? @map("nilai_penguji_2") @db.Decimal(5, 2)
+  nilaiAkhirPenguji Decimal? @map("nilai_akhir_penguji") @db.Decimal(5, 2)
+  catatanPenguji1Input String? @map("catatan_penguji_1_input")
+  catatanPenguji2Input String? @map("catatan_penguji_2_input")
+  nilaiPembimbingPresentasi Int? @map("nilai_pembimbing_presentasi") @db.SmallInt
+  nilaiPembimbingAlatBantu Int? @map("nilai_pembimbing_alat_bantu") @db.SmallInt
+  nilaiPembimbingPenampilan Int? @map("nilai_pembimbing_penampilan") @db.SmallInt
+  nilaiPembimbingPenguasaanMateri Int? @map("nilai_pembimbing_penguasaan_materi") @db.SmallInt
+  nilaiPembimbingKelayakanProposal Int? @map("nilai_pembimbing_kelayakan_proposal") @db.SmallInt
+  nilaiPembimbingTotal Decimal? @map("nilai_pembimbing_total") @db.Decimal(5, 2)
+  catatanPembimbing String? @map("catatan_pembimbing")
+  statusDinilaiPembimbing Boolean @default(false) @map("status_dinilai_pembimbing")
+  tanggalDinilaiPembimbing DateTime? @map("tanggal_dinilai_pembimbing") @db.Timestamp(0)
+  nilai Decimal? @db.Decimal(5, 2)
+  keputusanPenguji1 String? @map("keputusan_penguji_1") @db.VarChar(30)
+  catatanPenguji1 String? @map("catatan_penguji_1")
+  tenggatRevisiPenguji1 DateTime? @map("tenggat_revisi_penguji_1") @db.Date
+  diputuskanPenguji1At DateTime? @map("diputuskan_penguji_1_at") @db.Timestamp(0)
+  statusPersetujuan String @default("menunggu_nilai_lengkap") @map("status_persetujuan") @db.VarChar(50)
+  disetujuiKaprodiAt DateTime? @map("disetujui_kaprodi_at") @db.Timestamp(0)
+  catatanKaprodi String? @map("catatan_kaprodi")
+  hasil String? @db.VarChar(30)
+  catatanRevisi String? @map("catatan_revisi")
+  tenggatRevisi DateTime? @map("tenggat_revisi") @db.Date
+  statusRevisi String? @map("status_revisi") @db.VarChar(50)
+  buktiKehadiran String? @map("bukti_kehadiran") @db.VarChar(255)
+  beritaAcara String? @map("berita_acara") @db.VarChar(255)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+
+  jadwal JadwalSempro? @relation(fields: [idJadwal], references: [id], onDelete: Cascade)
+  penguji1 Pengguna? @relation("Examiner1Leader", fields: [penguji1Id], references: [id], onDelete: SetNull)
+  revisiList RevisiDokumen[]
+
+  @@map("berita_acara")
+}
+
+model RevisiDokumen {
+  id BigInt @id @default(autoincrement())
+  tipe String @default("sempro") @db.VarChar(30)
+  beritaAcaraId BigInt @map("berita_acara_id")
+  mahasiswaId BigInt @map("mahasiswa_id")
+  versi Int @default(1)
+  fileDraft String @map("file_draft") @db.VarChar(255)
+  fileNamaAsli String? @map("file_nama_asli") @db.VarChar(255)
+  fileUkuranBytes BigInt? @map("file_ukuran_bytes")
+  status String @default("menunggu_persetujuan") @db.VarChar(30)
+  catatanMahasiswa String? @map("catatan_mahasiswa")
+  persetujuan Json?
+  alasanPenolakan String? @map("alasan_penolakan")
+  ditolakOlehId BigInt? @map("ditolak_oleh_id")
+  disetujuiAt DateTime? @map("disetujui_at") @db.Timestamp(0)
+  ditolakAt DateTime? @map("ditolak_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+
+  beritaAcara BeritaAcara @relation(fields: [beritaAcaraId], references: [id], onDelete: Cascade)
+  mahasiswa Pengguna @relation("StudentRevision", fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  ditolakOleh Pengguna? @relation("RevisionRejecter", fields: [ditolakOlehId], references: [id], onDelete: SetNull)
+
+  @@index([beritaAcaraId, versi], map: "idx_revisi_dokumen_ba_versi")
+  @@index([mahasiswaId, tipe], map: "idx_revisi_dokumen_mhs")
+  @@map("revisi_dokumen")
+}
+
+model NomorSuratDasar {
+  id BigInt @id @default(autoincrement())
+  idPengajuan BigInt @unique @map("id_pengajuan")
+  tahun Int
+  nomorUrut Int @map("nomor_urut")
+  tanggalAlokasi DateTime @default(now()) @map("tanggal_alokasi") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+
+  pengajuan PengajuanJudul @relation(fields: [idPengajuan], references: [id], onDelete: Cascade)
+  kategoriList NomorSuratKategori[]
+
+  @@unique([tahun, nomorUrut], map: "uq_nomor_dasar_tahun_urut")
+  @@map("nomor_surat_dasar")
+}
+
+model NomorSuratKategori {
+  id BigInt @id @default(autoincrement())
+  idNomorDasar BigInt @map("id_nomor_dasar")
+  kategori String @db.VarChar(10)
+  nomorLengkap String @unique @map("nomor_lengkap") @db.VarChar(100)
+  bulanRomawi String @map("bulan_romawi") @db.VarChar(10)
+  tahun Int
+  tanggalTerbit DateTime @map("tanggal_terbit") @db.Date
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+
+  nomorDasar NomorSuratDasar @relation(fields: [idNomorDasar], references: [id], onDelete: Cascade)
+
+  @@unique([idNomorDasar, kategori], map: "uq_nomor_kategori_dasar")
+  @@map("nomor_surat_kategori")
 }
