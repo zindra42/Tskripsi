@@ -80,10 +80,13 @@ test("layanan sidang, dokumen dan komunikasi dijalankan dengan transaksi sinteti
   const { schedule, confirm, cancelSchedule, checkConflicts, assignExaminers, requestChange, decideRequest, recommendSlots, emergencyAssignment } = await import("../src/lib/sidang/scheduling");
   const { score, examinerDecision, approveResult, uploadRevision, reviewRevision, latePermission } = await import("../src/lib/sidang/scoring");
   const { correctSidang } = await import("../src/lib/support/corrections");
+  const { reviewSemproRevision } = await import("../src/lib/support/sempro-revisions");
+  const { rollbackAudit } = await import("../src/lib/support/audit-rollback");
   const { saveAnnouncement, readAnnouncement, processScheduled } = await import("../src/lib/support/announcements");
   const { sidangRecord, canRead } = await import("../src/lib/sidang/store");
   const { renderSidangPdf } = await import("../src/lib/sidang/documents");
   const { dashboardIndicators } = await import("../src/lib/support/dashboard");
+  const { studentOverview, lecturerOverview, managementOverview, systemOverview, commonOverview, administrationOverview } = await import("../src/lib/support/dashboard-overview");
   const { processReminders } = await import("../src/lib/sidang/reminders");
   t.mock.timers.enable({ apis: ["Date"], now: new Date("2026-11-09T00:00:00Z") });
   const globalDb = globalThis as unknown as { siasDatabase?: PrismaClient };
@@ -296,6 +299,23 @@ test("layanan sidang, dokumen dan komunikasi dijalankan dengan transaksi sinteti
     assert.equal(fixture.tables.jadwalSempro[0].status, "dibatalkan");
     assert.equal(fixture.tables.jadwalSempro[0].versi, 2);
   });
+  await t.test("review revisi sempro membuka sidang melalui approver aktif dan menolak versi lama", async () => {
+    reset();
+    Object.assign(fixture.tables.beritaAcara[0], { hasil: "lulus_revisi", statusRevisi: "dalam_revisi" });
+    const revision = await fixture.db.revisiDokumen.create({ data: { tipe: "sempro", beritaAcaraId: 60n, mahasiswaId: 1n, versi: 1, fileDraft: "revisi_sempro/test.pdf" } });
+    const input = { revisiId: String(revision.id), status: "disetujui" };
+    await assert.rejects(run(4, (c) => reviewSemproRevision(c, input)), /Penguji 1 aktif/);
+    await assert.rejects(run(1, initialize), /revisi/);
+    await run(3, (c) => reviewSemproRevision(c, input));
+    assert.equal(fixture.tables.beritaAcara[0].statusRevisi, "revisi_selesai");
+    await assert.rejects(run(2, (c) => reviewSemproRevision(c, input)), /versi aktif/);
+    await run(1, initialize); assert.equal(fixture.tables.pendaftaranSidang.length, 1);
+    reset();
+    Object.assign(fixture.tables.beritaAcara[0], { hasil: "lulus_revisi", statusRevisi: "dalam_revisi" });
+    fixture.tables.penugasanPenguji[0].isPengganti = true;
+    const stale = await fixture.db.revisiDokumen.create({ data: { tipe: "sempro", beritaAcaraId: 60n, mahasiswaId: 1n, versi: 1, fileDraft: "revisi_sempro/test.pdf" } });
+    await assert.rejects(run(3, (c) => reviewSemproRevision(c, { ...input, revisiId: String(stale.id) })), /Penguji 1 aktif/);
+  });
   await t.test("koreksi penugasan per slot menyimpan histori, mencabut ACC dan menolak perangkapan", async () => {
     reset(); await scheduled();
     const input = { correction: "sidang-examiner", id: sidangId(), slot: 1, dosenId: "7", reason: "Penguji berhalangan tetap" };
@@ -314,6 +334,55 @@ test("layanan sidang, dokumen dan komunikasi dijalankan dengan transaksi sinteti
     assert.equal(fixture.tables.bimbingan[0].idDosenPembimbing, 7n);
     assert.equal(fixture.tables.dokumenVerifikasi.find((d) => d.penandatanganUserId === 2n)!.status, "dicabut");
     assert.ok(fixture.tables.bimbingan[0].pembatalanP1); assert.ok(fixture.tables.logSuperAdmin.length);
+  });
+  await t.test("rollback audit menjalankan pembatalan akun, berkas, jadwal dan profil tanpa menghapus histori", async () => {
+    reset();
+    const reverse = async (action: string, entity: string, detail: object = {}) => {
+      const log = await fixture.db.logAktivitas.create({ data: { penggunaId: 6n, aksi: action, entitasTerkait: entity, detail, status: "aktif" } });
+      const input = { logId: String(log.id), cancellerId: "6", confirmation: "BATALKAN", reason: "Pembatalan aksi pengujian historis" };
+      await assert.rejects(run(6, (c) => rollbackAudit(c, input)), /superadmin/);
+      await run(8, (c) => rollbackAudit(c, input));
+      const saved = fixture.tables.logAktivitas.find((l) => l.id === log.id)!;
+      assert.equal(saved.status, "dibatalkan"); assert.equal(saved.dibatalkanOlehId, 6n); assert.equal(saved.pelakuAsliId, 8n);
+      await assert.rejects(run(8, (c) => rollbackAudit(c, input)), /sudah dibatalkan/);
+    };
+    await reverse("approve_akun", "pengguna:9");
+    assert.equal(fixture.tables.pengguna.find((u) => u.id === 9n)!.statusAkun, "menunggu_persetujuan");
+    assert.ok(!fixture.tables.authSession.some((s) => s.penggunaId === 9n));
+    await reverse("verifikasi_pembayaran_disetujui", "administrasi:90");
+    assert.equal(fixture.tables.verifikasiPembayaran[0].statusVerifikasi, "menunggu_verifikasi");
+    await reverse("judul_approve", "judul:20"); assert.equal(fixture.tables.pengajuanJudul[0].status, "diajukan");
+    fixture.tables.pengajuanJudul[0].status = "disetujui";
+    fixture.tables.dokumenVerifikasi.push({ id: 4000n, jenisDokumen: "acc", idBimbingan: 30n, idSempro: 40n, status: "sah" });
+    await reverse("terbit_acc_sempro", "DokumenVerifikasi #4000");
+    assert.equal(fixture.tables.dokumenVerifikasi.find((d) => d.id === 4000n)!.status, "dicabut");
+    fixture.tables.jadwalBimbingan.push({ id: 4001n, status: "selesai", deletedAt: null, bimbinganId: 30n });
+    await reverse("selesaikan_jadwal_bimbingan", "jadwal:4001", { before: { status: "dikonfirmasi_mahasiswa" } });
+    assert.equal(fixture.tables.jadwalBimbingan[0].status, "dikonfirmasi_mahasiswa");
+    await reverse("update_profil", "pengguna:2", { before: "Nama Dosen Sebelumnya", after: "Aktor 2" });
+    assert.equal(fixture.tables.pengguna.find((u) => u.id === 2n)!.nama, "Nama Dosen Sebelumnya");
+    fixture.tables.pengajuanPerubahanJudul.push({ id: 4002n, bimbinganId: 30n, status: "disetujui", judulLama: "Judul lama", matriksLama: {} });
+    await reverse("setujui_perubahan_judul", "Pengajuan Perubahan Judul #4002");
+    assert.equal(fixture.tables.pengajuanJudul[0].judul, "Judul lama");
+    assert.equal(fixture.tables.pengajuanPerubahanJudul[0].status, "menunggu_kaprodi");
+    await reverse("penetapan_dosen_pembimbing", "bimbingan:30");
+    assert.equal(fixture.tables.bimbingan.length, 1); assert.equal(fixture.tables.bimbingan[0].idDosenPembimbing, null);
+    assert.ok(fixture.tables.bimbingan[0].pembatalanP1);
+  });
+  await t.test("rollback audit menolak log stale dan dispensasi dengan hasil resmi; kegagalan mempertahankan status log", async () => {
+    reset();
+    const log = await fixture.db.logAktivitas.create({ data: { aksi: "judul_approve", entitasTerkait: "judul:20", status: "aktif" } });
+    await fixture.db.logAktivitas.create({ data: { aksi: "penetapan_berikutnya", entitasTerkait: "judul:20", status: "aktif" } });
+    const input = { logId: String(log.id), cancellerId: "6", confirmation: "BATALKAN", reason: "Pembatalan riwayat yang berubah" };
+    await assert.rejects(run(8, (c) => rollbackAudit(c, input)), /lebih baru/);
+    assert.equal(fixture.tables.logAktivitas.find((l) => l.id === log.id)!.status, "aktif");
+    const dispensation = await fixture.db.dispensasiKehadiranSempro.create({ data: { pendaftaranSemproId: 40n, mahasiswaId: 1n, status: "disetujui", alasan: "Sakit", syaratSaatPengajuan: 5, terkumpulSaatPengajuan: 3 } });
+    const dlog = await fixture.db.logAktivitas.create({ data: { aksi: "setujui_dispensasi_kehadiran", entitasTerkait: `Dispensasi #${dispensation.id}`, status: "aktif" } });
+    await assert.rejects(run(8, (c) => rollbackAudit(c, { ...input, logId: String(dlog.id) })), /berita acara/);
+    fixture.tables.beritaAcara[0].hasil = null; fixture.tables.pendaftaranSempro[0].dispensasiId = dispensation.id;
+    await run(8, (c) => rollbackAudit(c, { ...input, logId: String(dlog.id) }));
+    assert.equal(fixture.tables.dispensasiKehadiranSempro[0].status, "menunggu");
+    assert.equal(fixture.tables.pendaftaranSempro[0].dispensasiId, null);
   });
   await t.test("tidak lulus memblokir pendaftaran ulang siklus sama; siklus lama hanya baca", async () => {
     reset(); await result("tidak_lulus");
@@ -375,6 +444,30 @@ test("layanan sidang, dokumen dan komunikasi dijalankan dengan transaksi sinteti
     indicators = await dashboardIndicators(session(actor(2)));
     assert.equal(indicators.find((i) => i.label === "Naskah revisi menunggu persetujuan")?.count, 0);
   });
+  await t.test("dashboard progres, kuota, sasaran pengumuman dan kesehatan berasal dari data sesuai peran", async () => {
+    reset();
+    const initial = await studentOverview(session(actor(1)));
+    assert.equal(initial?.steps.length, 7); assert.equal(initial?.steps[4].status, "aktif");
+    assert.equal(await studentOverview(session(actor(3))), null);
+    fixture.tables.logbookBimbingan.push({ id: 2000n, idBimbingan: 30n, idDosen: 2n, statusSelesai: false, isDibatalkan: false });
+    const lecturer = await lecturerOverview(session(actor(2)));
+    assert.equal(lecturer?.total, 1); assert.equal(lecturer?.quota, 10); assert.equal(lecturer?.logs, 1);
+    assert.equal(await lecturerOverview(session(actor(10))), null);
+    assert.equal(await managementOverview(session(actor(1))), null);
+    assert.equal(await systemOverview(session(actor(3))), null);
+    assert.equal(await administrationOverview(session(actor(3))), null);
+    assert.equal((await administrationOverview(session(actor(10))))?.verified, 1);
+    await run(6, (c) => saveAnnouncement(c, { judul: "Hanya mahasiswa", isi: "Informasi akademik semester ini", kategori: "akademik", targetPeran: ["mahasiswa"], status: "terbit" }, {}));
+    assert.equal((await commonOverview(session(actor(1)))).announcements.length, 1);
+    assert.equal((await commonOverview(session(actor(3)))).announcements.length, 0);
+    fixture.tables.pengaturanSistem.push({ kunci: "scheduler_last_heartbeat", nilai: new Date().toISOString() });
+    const system = await systemOverview(session(actor(8)));
+    assert.ok(system?.healthy); assert.equal(system?.users.find((u) => u.role === "mahasiswa")?.active, 2);
+    const management = await managementOverview(session(actor(6)));
+    assert.ok(management?.lecturers.length); assert.equal(management?.funnel[0].count, 1);
+    await result("lulus");
+    assert.equal((await studentOverview(session(actor(1))))?.steps[6].status, "selesai");
+  });
   await t.test("pengingat H-7/H-3/H-1 idempoten per versi dan hanya dikirim untuk jadwal aktif", async () => {
     reset(); await scheduled();
     fixture.tables.jadwalSidang[0].tanggal = new Date("2026-11-16");
@@ -388,12 +481,13 @@ test("layanan sidang, dokumen dan komunikasi dijalankan dengan transaksi sinteti
   });
   await t.test("endpoint PDF memeriksa pemilik, revisi selesai, rekap pengelola dan pencabutan", async () => {
     reset(); await result();
+    await run(6, (c) => saveAnnouncement(c, { judul: "Lampiran publik", isi: "Lampiran informasi akademik", kategori: "umum", targetPeran: ["mahasiswa"], status: "terbit", publik: "true" }, { file: upload }));
     const nextHeaders = createRequire(import.meta.url)("next/headers") as typeof import("next/headers");
     const oldCookies = nextHeaders.cookies;
     let token = "1".repeat(64);
     nextHeaders.cookies = (async () => ({ get: () => ({ value: token }) })) as unknown as typeof nextHeaders.cookies;
     t.after(() => { nextHeaders.cookies = oldCookies; });
-    for (const id of [1, 6, 9]) fixture.tables.authSession.find((s) => s.penggunaId === BigInt(id))!.tokenHash = tokenHash(String(id).repeat(64));
+    for (const id of [1, 3, 6, 9]) fixture.tables.authSession.find((s) => s.penggunaId === BigInt(id))!.tokenHash = tokenHash(String(id).repeat(64));
     const { GET } = await import("../src/app/api/sidang/dokumen/[token]/route");
     const minutes = fixture.tables.dokumenVerifikasi.find((d) => d.jenisDokumen === "berita_acara_sidang")!;
     const summary = fixture.tables.dokumenVerifikasi.find((d) => d.jenisDokumen === "rekap_nilai_sidang")!;
@@ -421,6 +515,23 @@ test("layanan sidang, dokumen dan komunikasi dijalankan dengan transaksi sinteti
       assert.ok(Buffer.from(await template.arrayBuffer()).subarray(0, 5).equals(Buffer.from("%PDF-")));
     }
     assert.equal((await templates.GET(request, { params: Promise.resolve({ kind: "__proto__" }) })).status, 404);
+    const { storePrivateUpload } = await import("../src/lib/academic/files");
+    const revisionPath = await storePrivateUpload(upload, "revisi_sempro");
+    const semproRevision = await fixture.db.revisiDokumen.create({ data: { tipe: "sempro", beritaAcaraId: 60n, mahasiswaId: 1n, versi: 1, fileDraft: revisionPath } });
+    const semproFiles = await import("../src/app/sempro/revisi-draft/[id]/route");
+    const revisionParams = { params: Promise.resolve({ id: String(semproRevision.id) }) };
+    token = "1".repeat(64); assert.equal((await semproFiles.GET(request, revisionParams)).status, 200);
+    token = "9".repeat(64); assert.equal((await semproFiles.GET(request, revisionParams)).status, 404);
+    token = "3".repeat(64); assert.equal((await semproFiles.GET(request, revisionParams)).status, 200);
+    assert.equal((await semproFiles.GET(request, { params: Promise.resolve({ id: "9223372036854775808" }) })).status, 404);
+    const attachments = await import("../src/app/api/pengumuman/[id]/lampiran/route");
+    const announcementId = String(fixture.tables.pengumuman[0].id), attachmentParams = { params: Promise.resolve({ id: announcementId }) };
+    token = ""; assert.equal((await attachments.GET(request, attachmentParams)).status, 200);
+    fixture.tables.pengumuman[0].isPublik = false;
+    assert.equal((await attachments.GET(request, attachmentParams)).status, 404);
+    token = "1".repeat(64); assert.equal((await attachments.GET(request, attachmentParams)).status, 200);
+    token = "3".repeat(64); assert.equal((await attachments.GET(request, attachmentParams)).status, 404);
+    token = "6".repeat(64);
     fixture.tables.dokumenVerifikasi.find((d) => d.id === minutes.id)!.status = "dicabut";
     assert.equal((await get(minutes)).status, 410);
     const legacy = await import("../src/app/api/sempro/dokumen/[token]/route");
@@ -436,7 +547,7 @@ test("layanan sidang, dokumen dan komunikasi dijalankan dengan transaksi sinteti
     process.env.APP_ORIGIN = "http://localhost:3106";
     let origin = "https://foreign.invalid";
     nextHeaders.headers = (async () => new Headers({ origin })) as unknown as typeof nextHeaders.headers;
-    const token = "1".repeat(64);
+    let token = "1".repeat(64);
     nextHeaders.cookies = (async () => ({ get: () => ({ value: token }) })) as unknown as typeof nextHeaders.cookies;
     fixture.tables.authSession[0].tokenHash = tokenHash(token);
     const { sidangAction } = await import("../src/app/actions/sidang");
@@ -444,6 +555,13 @@ test("layanan sidang, dokumen dan komunikasi dijalankan dengan transaksi sinteti
     assert.match((await sidangAction({}, form)).error ?? "", /diverifikasi/); assert.equal(fixture.tables.pendaftaranSidang.length, 0);
     origin = "http://localhost:3106";
     const response = await sidangAction({}, form); assert.equal(response.success, "Perubahan tersimpan."); assert.equal(response.id, sidangId());
+    fixture.tables.authSession[0].tokenHash = "1".padStart(64, "0");
+    await scheduled();
+    token = "3".repeat(64); fixture.tables.authSession.find((s) => s.penggunaId === 3n)!.tokenHash = tokenHash(token);
+    const alternatives = new FormData();
+    for (const [key, value] of Object.entries({ command: "request-change", key: randomUUID(), ...values(), jenis: "ubah_jadwal", reason: "Jadwal perlu usulan alternatif", tanggal: "2026-11-10", mulai: "09:00", selesai: "10:30", ruang: "Ruang B", tanggal2: "2026-11-11", mulai2: "09:00", selesai2: "10:30", ruang2: "Ruang B", tanggal3: "2026-11-12", mulai3: "10:00", selesai3: "11:30", ruang3: "Ruang C" })) alternatives.set(key, value);
+    assert.equal((await sidangAction({}, alternatives)).success, "Perubahan tersimpan.");
+    assert.equal((fixture.tables.permohonanSidang[0].slotUsulan as unknown[]).length, 3);
   });
   await t.test("PDF naskah panjang menambah halaman dengan xref dan isi akhir tetap tersimpan", () => {
     const marker = "AKHIR_CATATAN_REVISI";

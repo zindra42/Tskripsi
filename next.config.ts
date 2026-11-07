@@ -17,6 +17,7 @@ const config: NextConfig = {
       { source: "/sidang/checklist/file/:id", destination: "/api/sidang/file/checklist/:id", permanent: false },
       { source: "/sidang/revisi-draft/:id", destination: "/api/sidang/file/revisi/:id", permanent: false },
       { source: "/pengumuman/publik", destination: "/pengumuman-publik", permanent: false },
+      { source: "/dosen/sempro/revisi", destination: "/sempro/revisi", permanent: false },
     ];
   },
   async headers() {

@@ -13,6 +13,8 @@ import { score, latePermission, examinerDecision, approveResult, uploadRevision,
 import { saveAnnouncement, archiveAnnouncement, readAnnouncement, processScheduled } from "@/lib/support/announcements";
 import { correctSidang } from "@/lib/support/corrections";
 import { processReminders } from "@/lib/sidang/reminders";
+import { reviewSemproRevision } from "@/lib/support/sempro-revisions";
+import { rollbackAudit } from "@/lib/support/audit-rollback";
 
 export type SidangFormState = { error?: string; success?: string; id?: string };
 export async function sidangAction(_state: SidangFormState, form: FormData): Promise<SidangFormState> {
@@ -24,8 +26,9 @@ export async function sidangAction(_state: SidangFormState, form: FormData): Pro
       && !["key", "command"].includes(key) && !key.startsWith("$ACTION_")));
     input.targetPeran = form.getAll("targetPeran");
     input.itemIds = form.getAll("itemIds");
-    if (command === "request-change" && input.jenis === "ubah_jadwal") input.slots = [
-      { tanggal: input.tanggal, mulai: input.mulai, selesai: input.selesai, ruang: input.ruang }];
+    if (command === "request-change" && input.jenis === "ubah_jadwal") input.slots = ["", "2", "3"]
+      .filter((suffix) => !suffix || ["tanggal", "mulai", "selesai", "ruang"].some((key) => input[`${key}${suffix}`]))
+      .map((suffix) => ({ tanggal: input[`tanggal${suffix}`], mulai: input[`mulai${suffix}`], selesai: input[`selesai${suffix}`], ruang: input[`ruang${suffix}`] }));
     let file: Upload | null;
     const raw = form.get("file");
     if ((command === "upload-revision" || command === "checklist" && input.nomorItem === "1") && raw instanceof File && raw.size) {
@@ -59,15 +62,17 @@ export async function sidangAction(_state: SidangFormState, form: FormData): Pro
         case "result": return approveResult(context, input);
         case "upload-revision": return uploadRevision(context, input, uploads);
         case "review-revision": return reviewRevision(context, input);
+        case "sempro-review-revision": return reviewSemproRevision(context, input);
         case "announcement-save": return saveAnnouncement(context, input, uploads);
         case "announcement-archive": return archiveAnnouncement(context, input);
         case "announcement-read": return readAnnouncement(context, input);
         case "announcement-process": return processScheduled(context);
         case "correction": return correctSidang(context, input);
+        case "audit-rollback": return rollbackAudit(context, input);
         default: throw new AccountError("Perintah tidak dikenal.");
       }
     });
-    for (const path of ["/sidang", "/pengumuman", "/pengumuman-publik", "/notifikasi", "/dashboard", "/audit", "/koreksi-proses"]) revalidatePath(path, "layout");
+    for (const path of ["/sidang", "/sempro", "/pengumuman", "/pengumuman-publik", "/notifikasi", "/dashboard", "/audit", "/koreksi-proses"]) revalidatePath(path, "layout");
     return { success: result && typeof result === "object" && "message" in result ? String(result.message) : "Perubahan tersimpan.", ...(result && typeof result === "object" && "id" in result ? { id: String(result.id) } : {}) };
   } catch (error) {
     if (error instanceof z.ZodError) return { error: "Periksa data formulir dan lengkapi semua kolom wajib." };

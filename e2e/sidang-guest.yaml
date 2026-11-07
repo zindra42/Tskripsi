@@ -23,3 +23,5 @@ tags:
 - assertVisible: Selamat datang kembali
 - openLink: http://127.0.0.1:3106/audit
 - assertVisible: Selamat datang kembali
+- openLink: http://127.0.0.1:3106/sempro/revisi
+- assertVisible: Selamat datang kembali

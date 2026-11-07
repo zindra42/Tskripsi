@@ -1,5 +1,9 @@
 # SIAS TypeScript
 
+Tahap sidang dan modul pendukung kini tersedia pada root repository ini. Rujukan implementasi, klasifikasi pembayaran aktif/historis, bukti FK logis, keputusan legacy dan batas verifikasi ada di [paritas TASK-006](docs/task006-parity.md); kontrak data/berkas untuk fase migrasi ada di [kontrak impor sidang](docs/sidang-import-contract.md). Catatan tahap sebelumnya di bawah tetap merupakan histori pengerjaan.
+
+Verifikasi TASK-006 pada 8 November 2026: `npm test` lulus **136/136** (termasuk 36 test/subtest sidang), `npm run lint`, `npm run typecheck`, `npm run prisma:validate`, `npm run build` dan `git diff --check` lulus. Oracle `npx tsx scripts/verify-legacy-sidang.ts D:/sis/skripsi` lulus 34 kasus. Delta Prisma dari `fea76e8` cocok dengan SQL migration setelah komentar/transaksi dinormalisasi, tanpa koneksi datasource. E2E Sokudo final lulus 20/20 langkah tamu, run `0958aabb-7d3f-411b-b433-b4b1b5636643`. LSP dipanggil untuk seluruh source yang berubah: mayoritas tanpa error, tetapi pemeriksaan akhir `support/dashboard-overview.ts`, `support/sempro-revisions.ts`, action sidang, detail sidang, komponen dashboard, helper test dan test sidang timeout. LSP seluruh versi final belum dapat disahkan; typecheck dan build final tetap lulus. PostgreSQL nyata, E2E pengguna aktif, impor riil dan pemasangan scheduler produksi belum diverifikasi.
+
 Fondasi pembangunan ulang SIAS dalam satu aplikasi Next.js App Router dengan TypeScript strict, Tailwind, Prisma, dan PostgreSQL. Source Laravel di repository sibling `skripsi/` menjadi referensi perilaku bisnis.
 
 ## Runtime dan dependensi

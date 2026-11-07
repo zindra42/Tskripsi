@@ -1,7 +1,18 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useRef } from "react";
 import { semproAction, type SemproFormState } from "@/app/actions/sempro";
+
+function useSemproAction() {
+  const key = useRef<string | null>(null);
+  return useActionState<SemproFormState, FormData>(async (previous, form) => {
+    key.current ??= crypto.randomUUID();
+    form.set("key", key.current);
+    const result = await semproAction(previous, form);
+    if (result.success) key.current = null;
+    return result;
+  }, {});
+}
 
 function Feedback({ state }: { state: SemproFormState }) {
   if (state.error) {
@@ -30,12 +41,10 @@ export function ChecklistUploadForm({
   nomorItem: number;
   label: string;
 }) {
-  const [state, action, isPending] = useActionState(semproAction, {});
-  const key = useId();
+  const [state, action, isPending] = useSemproAction();
 
   return (
     <form action={action} className="flex flex-col gap-2">
-      <input type="hidden" name="key" value={key} />
       <input type="hidden" name="command" value="upload-checklist" />
       <input type="hidden" name="pendaftaranId" value={pendaftaranId} />
       <input type="hidden" name="nomorItem" value={nomorItem} />
@@ -73,12 +82,10 @@ export function CentangMandiriForm({
   nomorItem: number;
   isCentang: boolean;
 }) {
-  const [state, action, isPending] = useActionState(semproAction, {});
-  const key = useId();
+  const [state, action, isPending] = useSemproAction();
 
   return (
     <form action={action} className="flex items-center gap-2">
-      <input type="hidden" name="key" value={key} />
       <input type="hidden" name="command" value="centang-checklist" />
       <input type="hidden" name="pendaftaranId" value={pendaftaranId} />
       <input type="hidden" name="nomorItem" value={nomorItem} />
@@ -105,12 +112,10 @@ export function CentangMandiriForm({
 }
 
 export function SubmitSemproForm({ pendaftaranId }: { pendaftaranId: string }) {
-  const [state, action, isPending] = useActionState(semproAction, {});
-  const key = useId();
+  const [state, action, isPending] = useSemproAction();
 
   return (
     <form action={action} className="flex flex-col gap-2">
-      <input type="hidden" name="key" value={key} />
       <input type="hidden" name="command" value="submit-sempro" />
       <input type="hidden" name="pendaftaranId" value={pendaftaranId} />
 
@@ -127,12 +132,10 @@ export function SubmitSemproForm({ pendaftaranId }: { pendaftaranId: string }) {
 }
 
 export function VerifikasiItemForm({ checklistItemId }: { checklistItemId: string }) {
-  const [state, action, isPending] = useActionState(semproAction, {});
-  const key = useId();
+  const [state, action, isPending] = useSemproAction();
 
   return (
     <form action={action} className="flex flex-col gap-2">
-      <input type="hidden" name="key" value={key} />
       <input type="hidden" name="command" value="verifikasi-checklist" />
       <input type="hidden" name="checklistItemId" value={checklistItemId} />
 
@@ -174,12 +177,10 @@ export function TetapkanPengujiForm({
   pendaftaranId: string;
   lecturers: { id: string; nama: string }[];
 }) {
-  const [state, action, isPending] = useActionState(semproAction, {});
-  const key = useId();
+  const [state, action, isPending] = useSemproAction();
 
   return (
     <form action={action} className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <input type="hidden" name="key" value={key} />
       <input type="hidden" name="command" value="tetapkan-penguji" />
       <input type="hidden" name="pendaftaranId" value={pendaftaranId} />
 
@@ -230,12 +231,10 @@ export function TetapkanPengujiForm({
 }
 
 export function AturJadwalForm({ pendaftaranId }: { pendaftaranId: string }) {
-  const [state, action, isPending] = useActionState(semproAction, {});
-  const key = useId();
+  const [state, action, isPending] = useSemproAction();
 
   return (
     <form action={action} className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <input type="hidden" name="key" value={key} />
       <input type="hidden" name="command" value="atur-jadwal" />
       <input type="hidden" name="pendaftaranId" value={pendaftaranId} />
 
@@ -309,12 +308,10 @@ export function AturJadwalForm({ pendaftaranId }: { pendaftaranId: string }) {
 }
 
 export function KonfirmasiJadwalForm({ jadwalId }: { jadwalId: string }) {
-  const [state, action, isPending] = useActionState(semproAction, {});
-  const key = useId();
+  const [state, action, isPending] = useSemproAction();
 
   return (
     <form action={action} className="flex flex-col gap-2">
-      <input type="hidden" name="key" value={key} />
       <input type="hidden" name="command" value="konfirmasi-jadwal" />
       <input type="hidden" name="jadwalId" value={jadwalId} />
 
@@ -351,12 +348,10 @@ export function KonfirmasiJadwalForm({ jadwalId }: { jadwalId: string }) {
 }
 
 export function CatatKehadiranForm({ jadwalId }: { jadwalId: string }) {
-  const [state, action, isPending] = useActionState(semproAction, {});
-  const key = useId();
+  const [state, action, isPending] = useSemproAction();
 
   return (
     <form action={action} className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <input type="hidden" name="key" value={key} />
       <input type="hidden" name="command" value="catat-kehadiran" />
       <input type="hidden" name="jadwalId" value={jadwalId} />
 
@@ -387,12 +382,10 @@ export function CatatKehadiranForm({ jadwalId }: { jadwalId: string }) {
 }
 
 export function NilaiPengujiForm({ jadwalId }: { jadwalId: string }) {
-  const [state, action, isPending] = useActionState(semproAction, {});
-  const key = useId();
+  const [state, action, isPending] = useSemproAction();
 
   return (
     <form action={action} className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <input type="hidden" name="key" value={key} />
       <input type="hidden" name="command" value="submit-nilai-penguji" />
       <input type="hidden" name="jadwalId" value={jadwalId} />
 
@@ -478,12 +471,10 @@ export function NilaiPengujiForm({ jadwalId }: { jadwalId: string }) {
 }
 
 export function NilaiPembimbingForm({ jadwalId }: { jadwalId: string }) {
-  const [state, action, isPending] = useActionState(semproAction, {});
-  const key = useId();
+  const [state, action, isPending] = useSemproAction();
 
   return (
     <form action={action} className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <input type="hidden" name="key" value={key} />
       <input type="hidden" name="command" value="submit-nilai-pembimbing" />
       <input type="hidden" name="jadwalId" value={jadwalId} />
 
@@ -569,12 +560,10 @@ export function NilaiPembimbingForm({ jadwalId }: { jadwalId: string }) {
 }
 
 export function KeputusanPenguji1Form({ jadwalId }: { jadwalId: string }) {
-  const [state, action, isPending] = useActionState(semproAction, {});
-  const key = useId();
+  const [state, action, isPending] = useSemproAction();
 
   return (
     <form action={action} className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
-      <input type="hidden" name="key" value={key} />
       <input type="hidden" name="command" value="simpan-keputusan-penguji1" />
       <input type="hidden" name="jadwalId" value={jadwalId} />
 
@@ -627,12 +616,10 @@ export function KeputusanPenguji1Form({ jadwalId }: { jadwalId: string }) {
 }
 
 export function SahkanHasilSemproForm({ jadwalId }: { jadwalId: string }) {
-  const [state, action, isPending] = useActionState(semproAction, {});
-  const key = useId();
+  const [state, action, isPending] = useSemproAction();
 
   return (
     <form action={action} className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm">
-      <input type="hidden" name="key" value={key} />
       <input type="hidden" name="command" value="sahkan-hasil-sempro" />
       <input type="hidden" name="jadwalId" value={jadwalId} />
 
@@ -676,12 +663,10 @@ export function SahkanHasilSemproForm({ jadwalId }: { jadwalId: string }) {
 }
 
 export function UnggahRevisiForm({ beritaAcaraId }: { beritaAcaraId: string }) {
-  const [state, action, isPending] = useActionState(semproAction, {});
-  const key = useId();
+  const [state, action, isPending] = useSemproAction();
 
   return (
     <form action={action} className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <input type="hidden" name="key" value={key} />
       <input type="hidden" name="command" value="unggah-revisi" />
       <input type="hidden" name="beritaAcaraId" value={beritaAcaraId} />
 
@@ -713,12 +698,10 @@ export function UnggahRevisiForm({ beritaAcaraId }: { beritaAcaraId: string }) {
 }
 
 export function DispensasiForm({ pendaftaranId }: { pendaftaranId: string }) {
-  const [state, action, isPending] = useActionState(semproAction, {});
-  const key = useId();
+  const [state, action, isPending] = useSemproAction();
 
   return (
     <form action={action} className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <input type="hidden" name="key" value={key} />
       <input type="hidden" name="command" value="ajukan-dispensasi" />
       <input type="hidden" name="pendaftaranId" value={pendaftaranId} />
 

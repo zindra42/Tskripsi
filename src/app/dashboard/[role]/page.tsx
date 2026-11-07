@@ -4,6 +4,7 @@ import { WorkspaceShell } from "@/components/workspace-shell";
 import { isRole, roleLabels } from "@/lib/auth/policy";
 import { requireArea } from "@/lib/auth/session";
 import { dashboardIndicators } from "@/lib/support/dashboard";
+import { DashboardOverview } from "@/components/dashboard-overview";
 
 export const dynamic = "force-dynamic";
 export default async function RoleDashboard({ params }: { params: Promise<{ role: string }> }) {
@@ -24,6 +25,6 @@ export default async function RoleDashboard({ params }: { params: Promise<{ role
         <span className="mb-3 block text-3xl font-bold">{item.count}</span><h2 className="font-semibold">{item.label}</h2>
       </Link>)}
     </section>
-    <section className="panel mt-6"><h2 className="mb-3 text-lg font-semibold">Informasi program studi</h2><Link className="underline" href="/pengumuman">Buka pengumuman akademik</Link></section>
+    <DashboardOverview session={session} />
   </WorkspaceShell>;
 }

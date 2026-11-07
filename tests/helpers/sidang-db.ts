@@ -27,9 +27,11 @@ export function syntheticSidang() {
     "checklistDokumen", "penugasanPenguji", "pendaftaranSidang", "jadwalSidang", "konfirmasiJadwalSidang", "riwayatJadwalSidang",
     "permohonanSidang", "penilaianSidang", "beritaAcara", "revisiDokumen", "dokumenVerifikasi", "nomorSuratDasar", "nomorSuratKategori",
     "logAktivitas", "logSuperAdmin", "notification", "academicReceipt", "verifikasiPembayaran", "pengumuman", "pengumumanDibaca", "pembayaranSidang", "logbookBimbingan",
-    "jadwalBimbingan", "pengajuanPerubahanJudul", "riwayatJadwalSempro", "konfirmasiJadwalSempro"];
+    "jadwalBimbingan", "pengajuanPerubahanJudul", "riwayatJadwalSempro", "konfirmasiJadwalSempro", "dispensasiKehadiranSempro", "mahasiswa", "dosen", "passwordResetRequest"];
   const tables: Record<string, Row[]> = Object.fromEntries(names.map((name) => [name, []]));
   tables.pengguna = clone(users) as unknown as Row[];
+  tables.mahasiswa = clone(users.filter((u) => u.mahasiswa).map((u) => u.mahasiswa)) as unknown as Row[];
+  tables.dosen = clone(users.filter((u) => u.dosen).map((u) => u.dosen)) as unknown as Row[];
   tables.authSession = users.map(session) as unknown as Row[];
   tables.pengaturanSistem = Object.entries({ periode_akademik_mulai: "2000-01-01", periode_akademik_selesai: "2099-12-31",
     metode_bobot_sidang: "rekap_rata_rata", nilai_batas_lulus_sidang: "51" }).map(([kunci, nilai]) => ({ kunci, nilai }));
@@ -52,19 +54,28 @@ export function syntheticSidang() {
     return { ...title, mahasiswa: findId("pengguna", title.idMahasiswa), bimbingan: tables.bimbingan.find((b) => b.idPengajuan === id) ?? null };
   };
   function hydrate(name: string, r: Row): Row {
-    if (name === "bimbingan") return { ...r, pengajuan: titleSummary(r.idPengajuan) };
-    if (name === "pengajuanJudul") return { ...r, mahasiswa: findId("pengguna", r.idMahasiswa), bimbingan: tables.bimbingan.find((b) => b.idPengajuan === r.id) ?? null,
+    if (name === "dispensasiKehadiranSempro") return { ...r, sempro: hydrate("pendaftaranSempro", findId("pendaftaranSempro", r.pendaftaranSemproId)!) };
+    if (name === "pengajuanPerubahanJudul") return { ...r, bimbingan: hydrate("bimbingan", findId("bimbingan", r.bimbinganId)!) };
+    if (name === "pengguna") return { ...r, _count: {
+      primarySupervisions: tables.bimbingan.filter((b) => b.idDosenPembimbing === r.id).length,
+      secondarySupervisions: tables.bimbingan.filter((b) => b.idDosenPembimbing2 === r.id).length,
+    } };
+    if (name === "logbookBimbingan") return { ...r, bimbingan: hydrate("bimbingan", findId("bimbingan", r.idBimbingan)!) };
+    if (name === "bimbingan") return { ...r, pengajuan: titleSummary(r.idPengajuan), documents: related("dokumenVerifikasi", "idBimbingan", r.id) };
+    if (name === "pengajuanJudul") return { ...r, mahasiswa: findId("pengguna", r.idMahasiswa), bimbingan: tables.bimbingan.find((b) => b.idPengajuan === r.id) ? hydrate("bimbingan", tables.bimbingan.find((b) => b.idPengajuan === r.id)!) : null,
       sempro: tables.pendaftaranSempro.filter((s) => s.idPengajuan === r.id).map((s) => hydrate("pendaftaranSempro", s))[0] ?? null };
     if (name === "pendaftaranSempro") return { ...r, pengajuan: titleSummary(r.idPengajuan), jadwal: related("jadwalSempro", "idSempro", r.id).map((j) => hydrate("jadwalSempro", j))[0], penguji: related("penugasanPenguji", "idSempro", r.id) };
     if (name === "jadwalSempro") {
       const sempro = findId("pendaftaranSempro", r.idSempro)!;
-      return { ...r, beritaAcara: related("beritaAcara", "idJadwal", r.id)[0] ?? null, sempro: {
+      return { ...r, beritaAcara: related("beritaAcara", "idJadwal", r.id)[0] ?? null, konfirmasiList: related("konfirmasiJadwalSempro", "jadwalSemproId", r.id), sempro: {
         ...sempro, pengajuan: titleSummary(sempro.idPengajuan), penguji: related("penugasanPenguji", "idSempro", r.idSempro),
       } };
     }
     if (name === "beritaAcara") {
       const j = findId("jadwalSidang", r.idJadwalSidang), s = j && findId("pendaftaranSidang", j.idSidang);
-      return { ...r, revisiList: desc(related("revisiDokumen", "beritaAcaraId", r.id), "versi"),
+      const semproSchedule = findId("jadwalSempro", r.idJadwal);
+      return { ...r, jadwal: semproSchedule ? hydrate("jadwalSempro", semproSchedule) : null,
+        revisiList: desc(related("revisiDokumen", "beritaAcaraId", r.id), "versi"),
         jadwalSidang: j && s ? { ...j, sidang: { ...s, pengajuan: hydrate("pengajuanJudul", findId("pengajuanJudul", s.idPengajuan)!), penguji: related("penugasanPenguji", "idSidangDaftar", s.id) } } : null };
     }
     if (name === "revisiDokumen") return { ...r, beritaAcara: hydrate("beritaAcara", findId("beritaAcara", r.beritaAcaraId)!) };
@@ -101,6 +112,7 @@ export function syntheticSidang() {
         if ("lt" in c) return Number(actual) < Number(c.lt);
         if ("some" in c) return Array.isArray(actual) && actual.some((x) => matches(row(x), row(c.some)));
         if ("contains" in c) return String(actual).includes(String(c.contains));
+        if ("array_contains" in c) return Array.isArray(actual) && (c.array_contains as unknown[]).every((v) => actual.includes(v));
         if (actual === undefined && key.includes("_")) return matches(r, c);
         return actual !== null && actual !== undefined && matches(row(actual), c);
       }
@@ -137,6 +149,7 @@ export function syntheticSidang() {
       createMany: async (a: { data: Row[] }) => { for (const data of a.data) await create({ data }); return { count: a.data.length }; },
       update: async (a: Row) => { const r = find(a)[0]; assert.ok(r, `Missing ${name}`); return update(r, row(a.data)); },
       updateMany: async (a: Row) => { const found = find(a); for (const r of found) update(r, row(a.data)); return { count: found.length }; },
+      deleteMany: async (a: Row) => { const found = find(a); tables[name] = tables[name].filter((r) => !found.includes(r)); return { count: found.length }; },
       upsert: async (a: Row) => { const r = find(a)[0]; return r ? update(r, row(a.update)) : create({ data: row(a.create) }); },
     };
   }

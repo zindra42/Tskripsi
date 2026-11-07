@@ -32,6 +32,7 @@ export function WorkspaceShell({ session, children }: {
             <Link href="/judul" className="block text-sm text-slate-600 hover:underline">Pengajuan dan review judul</Link>
             <Link href="/arsip-judul" className="block text-sm text-slate-600 hover:underline">Arsip judul terdahulu</Link>
             <Link href="/bimbingan" className="block text-sm text-slate-600 hover:underline">Bimbingan dan logbook</Link>
+            {session.user.dosen && ["dosen", "kaprodi", "sekpro"].includes(session.user.role) && <Link href="/sempro/revisi" className="block text-sm text-slate-600 hover:underline">Review revisi sempro</Link>}
             {session.user.role === "mahasiswa" && <>
               <Link href="/sempro/pendaftaran" className="block text-sm text-slate-600 hover:underline">Pendaftaran seminar proposal</Link>
               <Link href="/sempro/status" className="block text-sm text-slate-600 hover:underline">Status & revisi sempro</Link>
