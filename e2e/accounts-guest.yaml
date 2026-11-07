@@ -1,0 +1,28 @@
+name: Registrasi dan pemulihan publik SIAS
+url: ${BASE_URL}/login
+env:
+  BASE_URL: http://127.0.0.1:3100
+---
+- launchApp
+- assertVisible: Selamat datang kembali
+- tapOn: Daftar akun
+- assertVisible: Daftar akun SIAS
+- assertVisible: Jenis akun
+- assertVisible: Nama lengkap
+- assertVisible: Semester sesuai NIM dan periode aktif (7–14)
+- openLink: ${BASE_URL}/lupa-password
+- assertVisible: Pemulihan password
+- assertVisible: Ajukan pemulihan
+- assertVisible: Gunakan token persetujuan
+- assertVisible: Token dari pengelola
+- openLink: ${BASE_URL}/akun
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/akun/baru
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/akun/permohonan
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/profil
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/pengaturan
+- assertVisible: Selamat datang kembali
+- takeScreenshot: sias-accounts-public-guards

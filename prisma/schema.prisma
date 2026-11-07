@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  mahasiswa
+  dosen
+  kaprodi
+  sekpro
+  admin_keuangan
+  superadmin
+}
+
+enum StatusAkun {
+  menunggu_persetujuan
+  aktif
+  ditolak
+  nonaktif
+}
+
+model Pengguna {
+  id                   BigInt        @id @default(autoincrement())
+  nama                 String        @db.VarChar(255)
+  email                String?       @unique @db.Citext
+  emailArsip           String?       @map("email_arsip") @db.VarChar(255)
+  password             String        @db.VarChar(255)
+  role                 Role
+  statusAkun           StatusAkun    @default(menunggu_persetujuan) @map("status_akun")
+  catatanPenolakan     String?       @map("catatan_penolakan")
+  dibuatOlehSuperAdmin Boolean       @default(false) @map("dibuat_oleh_super_admin")
+  wajibGantiPassword   Boolean       @default(false) @map("wajib_ganti_password")
+  rememberToken        String?       @map("remember_token") @db.VarChar(100)
+  authVersion          Int           @default(0) @map("auth_version")
+  createdAt            DateTime?     @map("created_at") @db.Timestamp(0)
+  updatedAt            DateTime?     @map("updated_at") @db.Timestamp(0)
+  deletedAt            DateTime?     @map("deleted_at") @db.Timestamp(0)
+  mahasiswa            Mahasiswa?
+  dosen                Dosen?
+  adminKeuangan        AdminKeuangan?
+  sessions             AuthSession[]
+  resetRequests        PasswordResetRequest[] @relation("ResetOwner")
+  approvedResets       PasswordResetRequest[] @relation("ResetApprover")
+  biodataRequests      BiodataChangeRequest[] @relation("BiodataOwner")
+  biodataDecisions     BiodataChangeRequest[] @relation("BiodataApprover")
+  keahlianRequests     KeahlianChangeRequest[] @relation("KeahlianOwner")
+  keahlianDecisions    KeahlianChangeRequest[] @relation("KeahlianApprover")
+  activityLogs         LogAktivitas[]
+
+  @@map("pengguna")
+}
+
+model Mahasiswa {
+  penggunaId BigInt    @id @map("pengguna_id")
+  nim        String?   @unique @db.VarChar(50)
+  nimArsip   String?   @map("nim_arsip") @db.VarChar(50)
+  semester   Int       @db.SmallInt
+  noHp       String?   @map("no_hp") @db.VarChar(255)
+  createdAt  DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime? @map("updated_at") @db.Timestamp(0)
+  pengguna   Pengguna  @relation(fields: [penggunaId], references: [id], onDelete: Cascade)
+
+  @@map("mahasiswa")
+}
+
+model Dosen {
+  penggunaId     BigInt    @id @map("pengguna_id")
+  nidn           String?   @unique @db.VarChar(50)
+  nidnArsip      String?   @map("nidn_arsip") @db.VarChar(50)
+  noHp           String?   @map("no_hp") @db.VarChar(20)
+  kuotaBimbingan Int       @default(8) @map("kuota_bimbingan") @db.SmallInt
+  isKaprodi      Boolean   @default(false) @map("is_kaprodi")
+  isSekpro       Boolean   @default(false) @map("is_sekpro")
+  createdAt      DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt      DateTime? @map("updated_at") @db.Timestamp(0)
+  pengguna       Pengguna  @relation(fields: [penggunaId], references: [id], onDelete: Cascade)
+  keahlian       DosenKeahlian[]
+
+  @@map("dosen")
+}
+
+model AdminKeuangan {
+  penggunaId BigInt    @id @map("pengguna_id")
+  createdAt  DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime? @map("updated_at") @db.Timestamp(0)
+  pengguna   Pengguna  @relation(fields: [penggunaId], references: [id], onDelete: Cascade)
+
+  @@map("admin_keuangan")
+}
+
+model AuthSession {
+  tokenHash    String   @id @map("token_hash") @db.Char(64)
+  publicId     String   @unique @default(uuid()) @map("public_id") @db.Uuid
+  penggunaId   BigInt   @map("pengguna_id")
+  authVersion  Int      @map("auth_version")
+  activeRole   Role     @map("active_role")
+  remember     Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastActivity DateTime @map("last_activity") @db.Timestamptz(3)
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz(3)
+  pengguna     Pengguna @relation(fields: [penggunaId], references: [id], onDelete: Cascade)
+
+  @@index([penggunaId])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+model AuthRateLimit {
+  key         String   @id @db.Char(64)
+  attempts    Int
+  windowStart DateTime @map("window_start") @db.Timestamptz(3)
+
+  @@index([windowStart])
+  @@map("auth_rate_limits")
+}
+
+model BidangKeahlian {
+  id         BigInt @id @default(autoincrement())
+  namaBidang String @unique @map("nama_bidang") @db.Citext
+  createdAt  DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime? @map("updated_at") @db.Timestamp(0)
+  dosen      DosenKeahlian[]
+  @@map("bidang_keahlian")
+}
+
+model DosenKeahlian {
+  dosenId BigInt @map("dosen_id")
+  bidangId BigInt @map("bidang_id")
+  dosen Dosen @relation(fields: [dosenId], references: [penggunaId], onDelete: Cascade)
+  bidang BidangKeahlian @relation(fields: [bidangId], references: [id], onDelete: Restrict)
+  @@id([dosenId, bidangId])
+  @@map("dosen_keahlian")
+}
+
+model PengaturanSistem {
+  id BigInt @id @default(autoincrement())
+  kunci String @unique @db.VarChar(255)
+  nilai String
+  keterangan String? @db.VarChar(255)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  @@map("pengaturan_sistem")
+}
+
+model PasswordResetRequest {
+  id BigInt @id @default(autoincrement())
+  penggunaId BigInt @map("pengguna_id")
+  identitas String @db.VarChar(255)
+  status String @default("menunggu") @db.VarChar(30)
+  alasanPenolakan String? @map("alasan_penolakan")
+  approvedBy BigInt? @map("approved_by")
+  approvedAt DateTime? @map("approved_at") @db.Timestamp(0)
+  token String? @unique @db.VarChar(64)
+  tokenHash String? @unique @map("token_hash") @db.Char(64)
+  authVersion Int? @map("auth_version")
+  expiresAt DateTime? @map("expires_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  pengguna Pengguna @relation("ResetOwner", fields: [penggunaId], references: [id], onDelete: Restrict)
+  approver Pengguna? @relation("ResetApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+  @@index([penggunaId, status])
+  @@map("password_reset_requests")
+}
+
+model BiodataChangeRequest {
+  id BigInt @id @default(autoincrement())
+  mahasiswaId BigInt @map("mahasiswa_id")
+  namaLama String? @map("nama_lama") @db.VarChar(255)
+  namaBaru String? @map("nama_baru") @db.VarChar(255)
+  ubahNama Boolean @default(false) @map("ubah_nama")
+  emailLama String? @map("email_lama") @db.VarChar(255)
+  emailBaru String? @map("email_baru") @db.VarChar(255)
+  ubahEmail Boolean @default(false) @map("ubah_email")
+  nim String? @db.VarChar(255)
+  nimLama String? @map("nim_lama") @db.VarChar(255)
+  nimBaru String? @map("nim_baru") @db.VarChar(255)
+  ubahNim Boolean @default(false) @map("ubah_nim")
+  semesterLama Int? @map("semester_lama") @db.SmallInt
+  semesterBaru Int? @map("semester_baru") @db.SmallInt
+  ubahSemester Boolean @default(false) @map("ubah_semester")
+  noHpLama String? @map("no_hp_lama") @db.VarChar(255)
+  noHpBaru String? @map("no_hp_baru") @db.VarChar(255)
+  ubahNoHp Boolean @default(false) @map("ubah_no_hp")
+  rincianData String? @map("rincian_data")
+  alasan String
+  status String @default("pending") @db.VarChar(30)
+  catatanKaprodi String? @map("catatan_kaprodi")
+  diputuskanOleh BigInt? @map("diputuskan_oleh")
+  diputuskanAt DateTime? @map("diputuskan_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  mahasiswa Pengguna @relation("BiodataOwner", fields: [mahasiswaId], references: [id], onDelete: Restrict)
+  approver Pengguna? @relation("BiodataApprover", fields: [diputuskanOleh], references: [id], onDelete: SetNull)
+  @@index([mahasiswaId, status])
+  @@map("biodata_change_requests")
+}
+
+model KeahlianChangeRequest {
+  id BigInt @id @default(autoincrement())
+  dosenId BigInt @map("dosen_id")
+  namaLama String? @map("nama_lama") @db.VarChar(255)
+  namaBaru String? @map("nama_baru") @db.VarChar(255)
+  ubahNama Boolean @default(false) @map("ubah_nama")
+  emailLama String? @map("email_lama") @db.VarChar(255)
+  emailBaru String? @map("email_baru") @db.VarChar(255)
+  ubahEmail Boolean @default(false) @map("ubah_email")
+  nidnLama String? @map("nidn_lama") @db.VarChar(50)
+  nidnBaru String? @map("nidn_baru") @db.VarChar(50)
+  ubahNidn Boolean @default(false) @map("ubah_nidn")
+  noHpLama String? @map("no_hp_lama") @db.VarChar(20)
+  noHpBaru String? @map("no_hp_baru") @db.VarChar(20)
+  ubahNoHp Boolean @default(false) @map("ubah_no_hp")
+  keahlianLama Json? @map("keahlian_lama")
+  keahlianDiajukan Json? @map("keahlian_diajukan")
+  ubahKeahlian Boolean @default(false) @map("ubah_keahlian")
+  alasan String?
+  status String @default("pending") @db.VarChar(30)
+  catatanKaprodi String? @map("catatan_kaprodi")
+  diputuskanOleh BigInt? @map("diputuskan_oleh")
+  diputuskanAt DateTime? @map("diputuskan_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  dosen Pengguna @relation("KeahlianOwner", fields: [dosenId], references: [id], onDelete: Restrict)
+  approver Pengguna? @relation("KeahlianApprover", fields: [diputuskanOleh], references: [id], onDelete: SetNull)
+  @@index([dosenId, status])
+  @@map("keahlian_change_requests")
+}
+
+model LogAktivitas {
+  id BigInt @id @default(autoincrement())
+  penggunaId BigInt? @map("pengguna_id")
+  aksi String @db.VarChar(255)
+  entitasTerkait String @map("entitas_terkait") @db.VarChar(255)
+  waktu DateTime @default(now()) @db.Timestamp(0)
+  detail Json?
+  pengguna Pengguna? @relation(fields: [penggunaId], references: [id], onDelete: SetNull)
+  @@index([waktu])
+  @@map("log_aktivitas")
+}
+
+model LogSuperAdmin {
+  id BigInt @id @default(autoincrement())
+  waktu DateTime @default(now()) @db.Timestamp(0)
+  aksi String @db.VarChar(255)
+  targetType String? @map("target_type") @db.VarChar(255)
+  targetIdentifier String? @map("target_identifier") @db.VarChar(255)
+  targetNama String? @map("target_nama") @db.VarChar(255)
+  dataSebelum Json? @map("data_sebelum")
+  dataSesudah Json? @map("data_sesudah")
+  alasan String?
+  hasil String @default("berhasil") @db.VarChar(255)
+  ipAddress String? @map("ip_address") @db.VarChar(255)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  @@map("log_super_admin")
+}

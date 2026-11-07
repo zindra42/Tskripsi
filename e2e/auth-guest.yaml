@@ -1,0 +1,25 @@
+name: Fondasi autentikasi publik SIAS
+url: ${BASE_URL}
+env:
+  BASE_URL: http://127.0.0.1:3100
+---
+- launchApp
+- assertVisible: Selamat datang kembali
+- assertVisible: Ingat saya selama 7 hari
+- tapOn:
+    id: email
+- inputText: verifikasi@example.invalid
+- tapOn:
+    id: password
+- inputText: password-uji-tanpa-akun
+- tapOn: Masuk
+- assertVisible: Layanan autentikasi belum tersedia. Silakan coba kembali atau hubungi pengelola SIAS.
+- openLink: ${BASE_URL}/dashboard/kaprodi
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/ganti-password
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/menunggu-persetujuan
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/dashboard/penguji
+- assertVisible: Halaman tidak tersedia
+- takeScreenshot: sias-login-guest-guard
