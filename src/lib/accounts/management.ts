@@ -59,7 +59,7 @@ export async function changeAccountStatus(session: AuthenticatedSession, id: big
       await tx.pengguna.update({ where: { id }, data: { statusAkun: action === "activate" ? "aktif" : "nonaktif" } });
     }
     await invalidateSessions(tx, id);
-    await audit(tx, actor.id, `${action}_akun`, `pengguna:${id}`, { reason, before, after: identitySnapshot(await lockedAccount(tx, id)), transformation: action === "restore" ? "archive-or-terminal-legacy-suffix-v1" : null });
+    await audit(tx, actor.id, `${action}_akun`, `pengguna:${id}`, { reason, before, after: identitySnapshot(await lockedAccount(tx, id)), transformation: action === "restore" ? "archive-verbatim-or-terminal-active-suffix-v2" : null });
   });
 }
 

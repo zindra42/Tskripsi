@@ -1,5 +1,7 @@
 import "server-only";
 import { z } from "zod";
+import { database } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { hashPassword } from "@/lib/auth/password";
 import { newSessionToken, tokenHash } from "@/lib/auth/tokens";
 import type { AuthenticatedSession } from "@/lib/auth/session";
@@ -9,12 +11,17 @@ import { accountTransaction, audit, checkedActor, ensure, invalidateSessions, lo
 
 export async function requestPasswordReset(identity: string) {
   const identitas = z.string().trim().min(1).max(255).parse(identity);
+  const where = {
+    deletedAt: null, statusAkun: "aktif", role: { not: "superadmin" },
+    OR: [{ email: identitas }, { mahasiswa: { nim: identitas } }, { dosen: { nidn: identitas } }],
+  } satisfies Prisma.PenggunaWhereInput;
+  // Unknown/ambiguous public identities need no account mutation or shared lock.
+  const candidates = await database().pengguna.findMany({ where, select: { id: true }, take: 2 });
+  if (candidates.length !== 1) return;
   return accountTransaction(async (tx) => {
-    const matches = await tx.pengguna.findMany({ where: {
-      deletedAt: null, statusAkun: "aktif", role: { not: "superadmin" },
-      OR: [{ email: identitas }, { mahasiswa: { nim: identitas } }, { dosen: { nidn: identitas } }],
-    }, select: { id: true }, take: 2 });
-    if (matches.length !== 1) return;
+    // Identity/status can change while waiting. Never redirect a stale request to a new owner.
+    const matches = await tx.pengguna.findMany({ where, select: { id: true }, take: 2 });
+    if (matches.length !== 1 || matches[0].id !== candidates[0].id) return;
     const user = await lockedAccount(tx, matches[0].id);
     if (user.deletedAt || user.statusAkun !== "aktif" || user.role === "superadmin") return;
     const now = new Date();
@@ -60,9 +67,13 @@ export async function decidePasswordReset(session: AuthenticatedSession, id: big
 export async function completePasswordReset(input: unknown) {
   const data = z.object({ token: z.string().regex(/^[a-f0-9]{64}$/), password: newPasswordSchema, confirmation: z.string() })
     .refine((value) => value.password === value.confirmation).parse(input);
+  const hash = tokenHash(data.token);
+  const candidate = await database().passwordResetRequest.findUnique({ where: { tokenHash: hash } });
+  ensure(candidate && candidate.status === "disetujui" && candidate.expiresAt && candidate.expiresAt > new Date(), "Token tidak valid atau kedaluwarsa.");
   const password = await hashPassword(data.password);
   return accountTransaction(async (tx) => {
-    const request = await tx.passwordResetRequest.findUnique({ where: { tokenHash: tokenHash(data.token) } });
+    // Preflight is only admission: recheck under the same mutation lock for single-use/security races.
+    const request = await tx.passwordResetRequest.findUnique({ where: { tokenHash: hash } });
     ensure(request && request.status === "disetujui" && request.expiresAt && request.expiresAt > new Date(), "Token tidak valid atau kedaluwarsa.");
     const user = await lockedAccount(tx, request.penggunaId);
     ensure(user.deletedAt === null && user.statusAkun === "aktif" && user.role !== "superadmin"

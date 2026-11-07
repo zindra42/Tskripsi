@@ -166,3 +166,57 @@ test("regresi aktivitas sesi menggunakan cookie dan database sintetis", async (t
     assert.equal((await POST(request("POST"))).status, 403);
   });
 });
+
+test("cookie produksi mempertahankan prefix Host dan Origin HTTPS tanpa melemahkan mode lokal", async (t) => {
+  const navigationMock = mock.module("next/navigation", { exports: {
+    redirect: () => { throw new Error("Unexpected redirect"); },
+    notFound: () => { throw new Error("Unexpected notFound"); },
+  } });
+  const previousMode = process.env.NODE_ENV;
+  const previousOrigin = process.env.APP_ORIGIN;
+  const writes: { name: string; value: string; options: Record<string, unknown> }[] = [];
+  let origin: string | undefined = "https://sias.example.invalid";
+  const cookieMock = mock.method(nextHeaders, "cookies", async () => ({
+    set: (name: string, value: string, options: Record<string, unknown>) => { writes.push({ name, value, options }); },
+  }) as unknown as Awaited<ReturnType<typeof nextHeaders.cookies>>);
+  const headersMock = mock.method(nextHeaders, "headers", async () => new Headers(origin ? { origin } : {}));
+  t.after(() => {
+    navigationMock.restore(); cookieMock.mock.restore(); headersMock.mock.restore();
+    if (previousMode === undefined) Reflect.deleteProperty(process.env, "NODE_ENV");
+    else Object.assign(process.env, { NODE_ENV: previousMode });
+    if (previousOrigin === undefined) delete process.env.APP_ORIGIN;
+    else process.env.APP_ORIGIN = previousOrigin;
+  });
+  const { setSessionCookie, clearSessionCookie } = await import("../src/lib/auth/session");
+  const { hasTrustedOrigin } = await import("../src/lib/auth/origin");
+  Object.assign(process.env, { NODE_ENV: "production", APP_ORIGIN: origin });
+  assert.equal(await hasTrustedOrigin(), true);
+  const expires = new Date(Date.now() + 604800000);
+  await setSessionCookie("synthetic-token", false, expires);
+  await setSessionCookie("synthetic-token", true, expires);
+  await clearSessionCookie();
+  for (const write of writes) {
+    assert.equal(write.name, "__Host-sias_session");
+    assert.equal(write.options.secure, true);
+    assert.equal(write.options.httpOnly, true);
+    assert.equal(write.options.sameSite, "lax");
+    assert.equal(write.options.path, "/");
+    assert.equal(Object.hasOwn(write.options, "domain"), false);
+  }
+  assert.equal(Object.hasOwn(writes[0].options, "expires"), false);
+  assert.equal(writes[1].options.expires, expires);
+  assert.equal(writes[2].options.maxAge, 0);
+  assert.equal((writes[2].options.expires as Date).getTime(), 0);
+  for (const untrusted of [undefined, "http://sias.example.invalid", "https://foreign.invalid", "https://sias.example.invalid:444", "invalid"]) {
+    origin = untrusted;
+    assert.equal(await hasTrustedOrigin(), false);
+  }
+  origin = "http://127.0.0.1:3102";
+  process.env.APP_ORIGIN = origin;
+  assert.equal(await hasTrustedOrigin(), false);
+  Object.assign(process.env, { NODE_ENV: "development" });
+  assert.equal(await hasTrustedOrigin(), true);
+  await setSessionCookie("synthetic-token", false, expires);
+  assert.equal(writes.at(-1)?.name, "sias_session");
+  assert.equal(writes.at(-1)?.options.secure, false);
+});
