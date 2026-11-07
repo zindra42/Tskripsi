@@ -32,6 +32,19 @@ export function WorkspaceShell({ session, children }: {
             <Link href="/judul" className="block text-sm text-slate-600 hover:underline">Pengajuan dan review judul</Link>
             <Link href="/arsip-judul" className="block text-sm text-slate-600 hover:underline">Arsip judul terdahulu</Link>
             <Link href="/bimbingan" className="block text-sm text-slate-600 hover:underline">Bimbingan dan logbook</Link>
+            {session.user.role === "mahasiswa" && <>
+              <Link href="/sempro/pendaftaran" className="block text-sm text-slate-600 hover:underline">Pendaftaran seminar proposal</Link>
+              <Link href="/sempro/status" className="block text-sm text-slate-600 hover:underline">Status & revisi sempro</Link>
+            </>}
+            {["dosen", "kaprodi", "sekpro"].includes(session.activeRole) && (
+              <Link href="/sempro/konfirmasi-jadwal" className="block text-sm text-slate-600 hover:underline">Konfirmasi & nilai sempro</Link>
+            )}
+            <Link href="/sempro/kehadiran" className="block text-sm text-slate-600 hover:underline">Kehadiran seminar proposal</Link>
+            {canManage(session.user, session.activeRole) && <>
+              <Link href="/sempro/verifikasi" className="block text-sm text-slate-600 hover:underline">Verifikasi berkas sempro</Link>
+              <Link href="/sempro/jadwal" className="block text-sm text-slate-600 hover:underline">Jadwal sempro & penguji</Link>
+              <Link href="/sempro/hasil" className="block text-sm text-slate-600 hover:underline">Hasil kelulusan sempro</Link>
+            </>}
             <Link href="/notifikasi" className="block text-sm text-slate-600 hover:underline">Notifikasi</Link>
             {canManage(session.user, session.activeRole) && <>
               <Link href="/akun" className="block text-sm text-slate-600 hover:underline">Kelola dan setujui akun</Link>
