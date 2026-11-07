@@ -35,4 +35,11 @@ Referensi Laravel adalah `D:/sis/skripsi`, dibaca tanpa perubahan. Target adalah
 - **Operasional**: penjadwalan periodik, heartbeat scheduler, domain QR lama, storage produksi, impor template/data historis dan rekonsiliasi corpus berada pada gate rilis/TASK-007 atau deploy. Pemrosesan pengingat/pengumuman tersedia lewat backend/UI; belum ada scheduler produksi terpasang.
 - **Paritas penuh**: pemetaan di atas adalah cakupan implementasi dan bukti source, bukan sertifikat seluruh feature Laravel lulus runtime. Inventaris schema terminal menyeluruh, paritas pada ekspor nyata dan pemeriksaan URL/berkas historis tetap wajib pada TASK-007.
 
+## Pemeriksaan lanjutan 8 November 2026
+
+- Reviewer zindra mengonfirmasi HEAD/worktree, tetapi belum dapat membaca source prioritas karena output diff terpotong. Belum ada sign-off review keamanan, state atau lifecycle; hasil ini bukan persetujuan maupun bukti tidak adanya bug.
+- Pemeriksaan langsung source final menemukan alias referensi pada `snapshotBoard()`: perubahan penguji darurat ikut mengubah snapshot sebelum perubahan pada audit. Regresi menegaskan penguji sebelum `3` dan sesudah `7`; sebelum perbaikan assertion gagal (`7 !== 3`). Helper kini mengembalikan salinan dewan. Regresi sidang 36/36, seluruh suite 136/136, lint, typecheck, Prisma validate, build, `git diff --check` dan oracle PHP 34 kasus kembali lulus setelah perbaikan. YAML tamu kembali valid (20 langkah); rekaman run `0958aabb-7d3f-411b-b433-b4b1b5636643` terkonfirmasi lulus melalui `e2e_runs`, tanpa mengklaim run baru setelah perbaikan backend.
+- LSP dipanggil lagi pada `src/lib/sidang/store.ts` dan `tests/sidang.test.ts`, tetapi keduanya timeout. Tidak ada hasil LSP final untuk kedua berkas tersebut.
+- PostgreSQL lokal port 5432 yang telah diaktifkan pemilik belum terdaftar sebagai sumber Database Manager pada pemeriksaan tiket. Tool `database_*` tetap tidak tersedia di sesi worker ini. Tidak ada pembacaan/penulisan DB, migration atau seed melalui shell/script; bukti PostgreSQL nyata dan UI pengguna aktif tetap belum tersedia.
+
 Hasil command final dan batas LSP dicatat pada README dan komentar tiket. Semua commit hanya pada worker; Merge atau Discard tetap tindakan pemilik.

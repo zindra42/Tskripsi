@@ -185,6 +185,10 @@ test("layanan sidang, dokumen dan komunikasi dijalankan dengan transaksi sinteti
     await run(6, (c) => emergencyAssignment(c, { ...values(), dosenLamaId: "3", dosenId: "7", reason: "Penguji berhalangan darurat" }));
     assert.ok(fixture.tables.penugasanPenguji.some((p) => p.idSidangDaftar && p.idDosenPenguji === 3n && p.isPengganti));
     assert.equal(fixture.tables.dokumenVerifikasi.find((d) => d.id === invitation.id)!.status, "digantikan");
+    const replacementLog = fixture.tables.logAktivitas.find((log) => log.aksi === "penugasan_darurat_sidang")!;
+    const replacementDetail = replacementLog.detail as { before: { board: Record<string, string> }; after: { board: Record<string, string> } };
+    assert.equal(replacementDetail.before.board.penguji_1, "3");
+    assert.equal(replacementDetail.after.board.penguji_1, "7");
     await assert.rejects(run(3, (c) => score(c, values())), /bukan dewan/);
     t.mock.timers.setTime(new Date("2026-11-09T01:30Z").getTime());
     await run(7, (c) => score(c, { ...values(), ...Object.fromEntries(Object.keys(EXAMINER_WEIGHTS).map((k) => [k, "8"])) }));

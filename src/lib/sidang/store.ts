@@ -47,7 +47,8 @@ export function snapshotBoard(schedule: Pick<Schedule, "dewanSnapshot">): Board 
   const raw = schedule.dewanSnapshot;
   ensure(raw && typeof raw === "object" && !Array.isArray(raw), "Snapshot dewan perlu direkonsiliasi sebelum tindakan.");
   ensure(Object.values(raw).every((value) => typeof value === "string"), "Snapshot dewan tidak valid.");
-  return validateBoard(raw as Board);
+  // Callers may edit a proposed board; keep the loaded snapshot intact for audit history.
+  return validateBoard({ ...raw } as Board);
 }
 export function canRead(context: Pick<Context, "actor" | "role">, row: Sidang) {
   return canManage(context.actor, context.role) || context.actor.role === "mahasiswa" && row.pengajuan.idMahasiswa === context.actor.id
