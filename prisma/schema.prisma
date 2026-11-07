@@ -49,7 +49,24 @@ model Pengguna {
   biodataDecisions     BiodataChangeRequest[] @relation("BiodataApprover")
   keahlianRequests     KeahlianChangeRequest[] @relation("KeahlianOwner")
   keahlianDecisions    KeahlianChangeRequest[] @relation("KeahlianApprover")
-  activityLogs         LogAktivitas[]
+  activityLogs         LogAktivitas[] @relation("AuditActor")
+  cancelledActivityLogs LogAktivitas[] @relation("AuditCanceller")
+  originalActivityLogs LogAktivitas[] @relation("AuditOriginalActor")
+  submissions PengajuanJudul[] @relation("TitleOwner")
+  titleReviews PengajuanJudul[] @relation("TitleReviewer")
+  titleArchives PengajuanJudul[] @relation("TitleArchiver")
+  administrations VerifikasiPembayaran[] @relation("AdministrationOwner")
+  administrationReviews VerifikasiPembayaran[] @relation("AdministrationReviewer")
+  primarySupervisions Bimbingan[] @relation("PrimarySupervisor")
+  secondarySupervisions Bimbingan[] @relation("SecondarySupervisor")
+  supervisedLogs LogbookBimbingan[] @relation("LogSupervisor")
+  cancelledLogs LogbookBimbingan[] @relation("LogCanceller")
+  titleChanges PengajuanPerubahanJudul[]
+  lecturerSchedules JadwalBimbingan[] @relation("ScheduleLecturer")
+  studentSchedules JadwalBimbingan[] @relation("ScheduleStudent")
+  signedDocuments DokumenVerifikasi[] @relation("DocumentSigner")
+  revokedDocuments DokumenVerifikasi[] @relation("DocumentRevoker")
+  notifications Notifikasi[]
 
   @@map("pengguna")
 }
@@ -124,6 +141,10 @@ model BidangKeahlian {
   createdAt  DateTime? @map("created_at") @db.Timestamp(0)
   updatedAt  DateTime? @map("updated_at") @db.Timestamp(0)
   dosen      DosenKeahlian[]
+  firstTitles PengajuanJudul[] @relation("TitleField1")
+  secondTitles PengajuanJudul[] @relation("TitleField2")
+  firstChanges PengajuanPerubahanJudul[] @relation("ChangeField1")
+  secondChanges PengajuanPerubahanJudul[] @relation("ChangeField2")
   @@map("bidang_keahlian")
 }
 
@@ -237,7 +258,15 @@ model LogAktivitas {
   entitasTerkait String @map("entitas_terkait") @db.VarChar(255)
   waktu DateTime @default(now()) @db.Timestamp(0)
   detail Json?
-  pengguna Pengguna? @relation(fields: [penggunaId], references: [id], onDelete: SetNull)
+  data Json?
+  status String @default("aktif") @db.VarChar(30)
+  dibatalkanAt DateTime? @map("dibatalkan_at") @db.Timestamp(0)
+  dibatalkanOlehId BigInt? @map("dibatalkan_oleh_id")
+  pelakuAsliId BigInt? @map("pelaku_asli_id")
+  alasanPembatalan String? @map("alasan_pembatalan")
+  pengguna Pengguna? @relation("AuditActor", fields: [penggunaId], references: [id], onDelete: SetNull)
+  canceller Pengguna? @relation("AuditCanceller", fields: [dibatalkanOlehId], references: [id], onDelete: SetNull)
+  originalActor Pengguna? @relation("AuditOriginalActor", fields: [pelakuAsliId], references: [id], onDelete: SetNull)
   @@index([waktu])
   @@map("log_aktivitas")
 }
@@ -257,4 +286,269 @@ model LogSuperAdmin {
   createdAt DateTime? @map("created_at") @db.Timestamp(0)
   updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
   @@map("log_super_admin")
+}
+
+model VerifikasiPembayaran {
+  id BigInt @id @default(autoincrement())
+  idMahasiswa BigInt @map("id_mahasiswa")
+  idAdminKeuangan BigInt? @map("id_admin_keuangan")
+  fileKwitansi String? @map("file_kwitansi") @db.VarChar(255)
+  fileKrsSka String? @map("file_krs_ska") @db.VarChar(255)
+  fileBuktiTransfer String? @map("file_bukti_transfer") @db.VarChar(255)
+  tanggalTransfer DateTime? @map("tanggal_transfer") @db.Date
+  namaPengirim String? @map("nama_pengirim") @db.VarChar(255)
+  statusVerifikasi String @default("menunggu_verifikasi") @map("status_verifikasi") @db.VarChar(30)
+  catatanPenolakan String? @map("catatan_penolakan")
+  perluVerifikasiUlang Boolean @default(false) @map("perlu_verifikasi_ulang")
+  periode String? @db.VarChar(100)
+  siklusKe Int @default(1) @map("siklus_ke") @db.SmallInt
+  snapshotVersion String? @map("snapshot_version") @db.VarChar(80)
+  revision Int @default(1)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  mahasiswa Pengguna @relation("AdministrationOwner", fields: [idMahasiswa], references: [id], onDelete: Restrict)
+  reviewer Pengguna? @relation("AdministrationReviewer", fields: [idAdminKeuangan], references: [id], onDelete: SetNull)
+  @@index([idMahasiswa, statusVerifikasi])
+  @@map("verifikasi_pembayaran")
+}
+
+model PengajuanJudul {
+  id BigInt @id @default(autoincrement())
+  idMahasiswa BigInt @map("id_mahasiswa")
+  bidangKeahlianId BigInt? @map("bidang_keahlian_id")
+  bidangKeahlian2Id BigInt? @map("bidang_keahlian_2_id")
+  judul String @db.VarChar(255)
+  fileProposal String @map("file_proposal") @db.VarChar(255)
+  matriksPenelitian Json? @map("matriks_penelitian")
+  status String @default("diajukan") @db.VarChar(30)
+  statusDraft String @default("draft") @map("status_draft") @db.VarChar(30)
+  draftData Json? @map("draft_data")
+  counterPengajuan Int @default(0) @map("counter_pengajuan")
+  catatanKaprodi String? @map("catatan_kaprodi")
+  preferensiDosenIds Json? @map("preferensi_dosen_ids")
+  skorKemiripan Int? @map("skor_kemiripan")
+  judulTermirip String? @map("judul_termirip")
+  penulisTermirip String? @map("penulis_termirip") @db.VarChar(255)
+  nimTermirip String? @map("nim_termirip") @db.VarChar(50)
+  tahunTermirip Int? @map("tahun_termirip")
+  topKemiripan Json? @map("top_kemiripan")
+  tanggalPengajuan DateTime? @map("tanggal_pengajuan") @db.Timestamp(0)
+  tanggalPersetujuan DateTime? @map("tanggal_persetujuan") @db.Timestamp(0)
+  lastVerifierId BigInt? @map("last_verifier_id")
+  lastVerifierRole String? @map("last_verifier_role") @db.VarChar(30)
+  semesterSaatPengajuan Int? @map("semester_saat_pengajuan") @db.SmallInt
+  periodeAkademikSaatPengajuan String? @map("periode_akademik_saat_pengajuan") @db.VarChar(255)
+  siklusKe Int @default(1) @map("siklus_ke") @db.SmallInt
+  snapshotVersion String? @map("snapshot_version") @db.VarChar(80)
+  isDiarsipkan Boolean @default(false) @map("is_diarsipkan")
+  diarsipkanAt DateTime? @map("diarsipkan_at") @db.Timestamp(0)
+  diarsipkanOlehId BigInt? @map("diarsipkan_oleh_id")
+  alasanArsip String? @map("alasan_arsip")
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  mahasiswa Pengguna @relation("TitleOwner", fields: [idMahasiswa], references: [id], onDelete: Restrict)
+  reviewer Pengguna? @relation("TitleReviewer", fields: [lastVerifierId], references: [id], onDelete: SetNull)
+  archiver Pengguna? @relation("TitleArchiver", fields: [diarsipkanOlehId], references: [id], onDelete: SetNull)
+  bidang1 BidangKeahlian? @relation("TitleField1", fields: [bidangKeahlianId], references: [id], onDelete: SetNull)
+  bidang2 BidangKeahlian? @relation("TitleField2", fields: [bidangKeahlian2Id], references: [id], onDelete: SetNull)
+  bimbingan Bimbingan?
+  documents DokumenVerifikasi[]
+  @@index([idMahasiswa, isDiarsipkan, deletedAt])
+  @@index([status, statusDraft])
+  @@map("pengajuan_judul")
+}
+
+model Bimbingan {
+  id BigInt @id @default(autoincrement())
+  idPengajuan BigInt @unique @map("id_pengajuan")
+  idDosenPembimbing BigInt? @map("id_dosen_pembimbing")
+  idDosenPembimbing2 BigInt? @map("id_dosen_pembimbing_2")
+  tanggalPenetapan DateTime @map("tanggal_penetapan") @db.Date
+  catatanPermintaanMhs String? @map("catatan_permintaan_mhs")
+  pembatalanP1 Json? @map("pembatalan_p1")
+  pembatalanP2 Json? @map("pembatalan_p2")
+  siklusKe Int @default(1) @map("siklus_ke") @db.SmallInt
+  // Written only by the later sempro lifecycle after an official pass or completed revision.
+  faseSkripsiAt DateTime? @map("fase_skripsi_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  pengajuan PengajuanJudul @relation(fields: [idPengajuan], references: [id], onDelete: Restrict)
+  pembimbing1 Pengguna? @relation("PrimarySupervisor", fields: [idDosenPembimbing], references: [id], onDelete: SetNull)
+  pembimbing2 Pengguna? @relation("SecondarySupervisor", fields: [idDosenPembimbing2], references: [id], onDelete: SetNull)
+  logbook LogbookBimbingan[]
+  changes PengajuanPerubahanJudul[]
+  schedules JadwalBimbingan[]
+  documents DokumenVerifikasi[]
+  @@index([idDosenPembimbing])
+  @@index([idDosenPembimbing2])
+  @@map("bimbingan")
+}
+
+model LogbookBimbingan {
+  id BigInt @id @default(autoincrement())
+  idBimbingan BigInt @map("id_bimbingan")
+  idDosen BigInt? @map("id_dosen")
+  fase String @default("sempro") @db.VarChar(20)
+  siklusKe Int @default(1) @map("siklus_ke") @db.SmallInt
+  tanggal DateTime @db.Date
+  catatan String
+  catatanMahasiswa String? @map("catatan_mahasiswa")
+  statusSelesai Boolean @default(false) @map("status_selesai")
+  isDibatalkan Boolean @default(false) @map("is_dibatalkan")
+  dibatalkanAt DateTime? @map("dibatalkan_at") @db.Timestamp(0)
+  dibatalkanOlehId BigInt? @map("dibatalkan_oleh_id")
+  alasanPembatalan String? @map("alasan_pembatalan")
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  bimbingan Bimbingan @relation(fields: [idBimbingan], references: [id], onDelete: Restrict)
+  dosen Pengguna? @relation("LogSupervisor", fields: [idDosen], references: [id], onDelete: SetNull)
+  canceller Pengguna? @relation("LogCanceller", fields: [dibatalkanOlehId], references: [id], onDelete: SetNull)
+  @@index([idBimbingan, fase, siklusKe])
+  @@map("logbook_bimbingan")
+}
+
+model PengajuanPerubahanJudul {
+  id BigInt @id @default(autoincrement())
+  bimbinganId BigInt @map("bimbingan_id")
+  judulLama String @map("judul_lama")
+  judulBaru String @map("judul_baru")
+  alasan String
+  matriksLama Json? @map("matriks_lama")
+  matriksBaru Json? @map("matriks_baru")
+  bidangKeahlianIdBaru BigInt? @map("bidang_keahlian_id_baru")
+  bidangKeahlian2IdBaru BigInt? @map("bidang_keahlian_2_id_baru")
+  jenisPerubahan String @default("revisi_minor") @map("jenis_perubahan") @db.VarChar(30)
+  status String @default("menunggu_dospem") @db.VarChar(30)
+  catatanDospem String? @map("catatan_dospem")
+  catatanInternalDospem String? @map("catatan_internal_dospem")
+  catatanKaprodi String? @map("catatan_kaprodi")
+  konfirmasiDospem1At DateTime? @map("konfirmasi_dospem_1_at") @db.Timestamp(0)
+  konfirmasiDospem2At DateTime? @map("konfirmasi_dospem_2_at") @db.Timestamp(0)
+  disetujuiDospem1 Boolean? @map("disetujui_dospem_1")
+  disetujuiDospem2 Boolean? @map("disetujui_dospem_2")
+  skorKemiripan Int? @map("skor_kemiripan")
+  penyetujuId BigInt? @map("penyetuju_id")
+  penyetujuRole String? @map("penyetuju_role") @db.VarChar(30)
+  keputusanAt DateTime? @map("keputusan_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  bimbingan Bimbingan @relation(fields: [bimbinganId], references: [id], onDelete: Restrict)
+  approver Pengguna? @relation(fields: [penyetujuId], references: [id], onDelete: SetNull)
+  bidang1 BidangKeahlian? @relation("ChangeField1", fields: [bidangKeahlianIdBaru], references: [id], onDelete: SetNull)
+  bidang2 BidangKeahlian? @relation("ChangeField2", fields: [bidangKeahlian2IdBaru], references: [id], onDelete: SetNull)
+  @@index([bimbinganId, status])
+  @@map("pengajuan_perubahan_judul")
+}
+
+model JadwalBimbingan {
+  id BigInt @id @default(autoincrement())
+  dosenId BigInt @map("dosen_id")
+  mahasiswaId BigInt @map("mahasiswa_id")
+  bimbinganId BigInt? @map("bimbingan_id")
+  waktuMulai DateTime @map("waktu_mulai") @db.Timestamp(0)
+  waktuSelesai DateTime @map("waktu_selesai") @db.Timestamp(0)
+  lokasi String @db.VarChar(255)
+  catatan String?
+  alasanReschedule String? @map("alasan_reschedule")
+  usulanWaktuReschedule DateTime? @map("usulan_waktu_reschedule") @db.Timestamp(0)
+  status String @default("diajukan") @db.VarChar(30)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  dosen Pengguna @relation("ScheduleLecturer", fields: [dosenId], references: [id], onDelete: Restrict)
+  mahasiswa Pengguna @relation("ScheduleStudent", fields: [mahasiswaId], references: [id], onDelete: Restrict)
+  bimbingan Bimbingan? @relation(fields: [bimbinganId], references: [id], onDelete: Restrict)
+  @@index([mahasiswaId, waktuMulai])
+  @@index([dosenId, waktuMulai])
+  @@map("jadwal_bimbingan")
+}
+
+model ArsipJudulSkripsi {
+  id BigInt @id @default(autoincrement())
+  judul String
+  namaPenulis String? @map("nama_penulis") @db.VarChar(255)
+  nim String? @db.VarChar(50)
+  tahun String? @db.VarChar(10)
+  prodi String? @db.VarChar(100)
+  keywords Json?
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  @@index([tahun])
+  @@index([prodi])
+  @@map("arsip_judul_skripsi")
+}
+
+model DokumenVerifikasi {
+  id BigInt @id @default(autoincrement())
+  jenisDokumen String @map("jenis_dokumen") @db.VarChar(50)
+  token String @unique @db.VarChar(64)
+  idPengajuan BigInt? @map("id_pengajuan")
+  idBimbingan BigInt? @map("id_bimbingan")
+  // Later domain migrations attach the corresponding sempro/sidang foreign keys.
+  idSempro BigInt? @map("id_sempro")
+  idJadwal BigInt? @map("id_jadwal")
+  idSidang BigInt? @map("id_sidang")
+  idJadwalSidang BigInt? @map("id_jadwal_sidang")
+  penandatanganUserId BigInt? @map("penandatangan_user_id")
+  namaPenandatangan String @map("nama_penandatangan") @db.VarChar(255)
+  jabatanSnapshot String? @map("jabatan_snapshot") @db.VarChar(255)
+  peran String? @db.VarChar(50)
+  nomorSurat String? @map("nomor_surat") @db.VarChar(255)
+  status String @default("sah") @db.VarChar(30)
+  versi Int @default(1)
+  digantikanOlehId BigInt? @map("digantikan_oleh_id")
+  snapshotJson Json? @map("snapshot_json")
+  hashSha256 String? @map("hash_sha256") @db.Char(64)
+  diterbitkanAt DateTime? @map("diterbitkan_at") @db.Timestamp(0)
+  dicabutAt DateTime? @map("dicabut_at") @db.Timestamp(0)
+  alasanPencabutan String? @map("alasan_pencabutan")
+  dicabutOlehId BigInt? @map("dicabut_oleh_id")
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  pengajuan PengajuanJudul? @relation(fields: [idPengajuan], references: [id], onDelete: Restrict)
+  bimbingan Bimbingan? @relation(fields: [idBimbingan], references: [id], onDelete: Restrict)
+  signer Pengguna? @relation("DocumentSigner", fields: [penandatanganUserId], references: [id], onDelete: SetNull)
+  revoker Pengguna? @relation("DocumentRevoker", fields: [dicabutOlehId], references: [id], onDelete: SetNull)
+  replacement DokumenVerifikasi? @relation("DocumentReplacement", fields: [digantikanOlehId], references: [id], onDelete: SetNull)
+  predecessors DokumenVerifikasi[] @relation("DocumentReplacement")
+  @@index([idBimbingan, jenisDokumen, status])
+  @@map("dokumen_verifikasi")
+}
+
+model Notifikasi {
+  id BigInt @id @default(autoincrement())
+  penggunaId BigInt @map("pengguna_id")
+  jenisEvent String @map("jenis_event") @db.VarChar(255)
+  kanal String @db.VarChar(30)
+  statusKirim String @default("pending") @map("status_kirim") @db.VarChar(30)
+  waktuKirim DateTime? @map("waktu_kirim") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  pengguna Pengguna @relation(fields: [penggunaId], references: [id], onDelete: Cascade)
+  @@map("notifikasi")
+}
+
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+  type String @db.VarChar(255)
+  notifiableType String @map("notifiable_type") @db.VarChar(255)
+  notifiableId BigInt @map("notifiable_id")
+  data String
+  readAt DateTime? @map("read_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  @@index([notifiableType, notifiableId])
+  @@map("notifications")
+}
+
+// A committed receipt makes form retries idempotent, including file uploads.
+model AcademicReceipt {
+  key String @id @db.Uuid
+  actorId BigInt @map("actor_id")
+  command String @db.VarChar(80)
+  fingerprint String @db.Char(64)
+  result Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@map("academic_receipts")
 }

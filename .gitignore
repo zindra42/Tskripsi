@@ -8,3 +8,4 @@ coverage/
 src/generated/
 next-env.d.ts
 *.log
+.sias-storage/

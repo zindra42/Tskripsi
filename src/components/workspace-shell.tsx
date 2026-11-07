@@ -28,6 +28,11 @@ export function WorkspaceShell({ session, children }: {
             <Link href={`/dashboard/${session.activeRole}`} className="block font-semibold hover:underline">Dashboard</Link>
             <Link href="/ganti-password" className="block text-sm text-slate-600 hover:underline">Ganti password</Link>
             <Link href="/profil" className="block text-sm text-slate-600 hover:underline">Profil saya</Link>
+            {(session.user.role === "mahasiswa" || session.user.role === "admin_keuangan" || session.user.role === "superadmin") && <Link href="/administrasi" className="block text-sm text-slate-600 hover:underline">Administrasi skripsi</Link>}
+            <Link href="/judul" className="block text-sm text-slate-600 hover:underline">Pengajuan dan review judul</Link>
+            <Link href="/arsip-judul" className="block text-sm text-slate-600 hover:underline">Arsip judul terdahulu</Link>
+            <Link href="/bimbingan" className="block text-sm text-slate-600 hover:underline">Bimbingan dan logbook</Link>
+            <Link href="/notifikasi" className="block text-sm text-slate-600 hover:underline">Notifikasi</Link>
             {canManage(session.user, session.activeRole) && <>
               <Link href="/akun" className="block text-sm text-slate-600 hover:underline">Kelola dan setujui akun</Link>
               <Link href="/akun/permohonan" className="block text-sm text-slate-600 hover:underline">Permohonan akun</Link>

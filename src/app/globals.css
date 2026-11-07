@@ -15,10 +15,10 @@ body {
 
 @layer base {
   label { @apply mb-2 block text-sm font-semibold; }
-  input:not([type="checkbox"]), select {
+  input:not([type="checkbox"]), select, textarea {
     @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-950;
   }
-  input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible {
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible {
     @apply outline-2 outline-offset-4 outline-amber-500;
   }
   button { @apply cursor-pointer; }

@@ -1,0 +1,22 @@
+name: Guard guest administrasi judul dan bimbingan SIAS
+url: ${BASE_URL}/login
+env:
+  BASE_URL: http://127.0.0.1:3104
+---
+- launchApp
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/administrasi
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/judul
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/judul/1
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/arsip-judul
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/bimbingan
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/bimbingan/1
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/notifikasi
+- assertVisible: Selamat datang kembali
+- takeScreenshot: sias-academic-guest-guards

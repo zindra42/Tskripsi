@@ -6,6 +6,7 @@ const config: NextConfig = {
   turbopack: { root: __dirname },
   outputFileTracingRoot: __dirname,
   serverExternalPackages: ["@node-rs/argon2"],
+  experimental: { serverActions: { bodySizeLimit: "12mb" } },
   async headers() {
     return [{
       source: "/:path*",
