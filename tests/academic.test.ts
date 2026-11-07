@@ -559,6 +559,13 @@ test("alur akademik menjalankan layanan dan entry point aktual dengan database s
       login(5); assert.equal((await request()).status, 404);
       login(4); assert.equal((await request()).status, 404);
       login(3); assert.equal((await request()).status, 200);
+      const formerLecturer = fixture.tables.pengguna.find((item) => item.id === actors[3].id)!;
+      formerLecturer.role = "admin_keuangan";
+      fixture.tables.authSession.find((item) => item.penggunaId === actors[3].id)!.activeRole = "admin_keuangan";
+      assert.ok(formerLecturer.dosen);
+      assert.equal((await request()).status, 404);
+      formerLecturer.role = "dosen";
+      fixture.tables.authSession.find((item) => item.penggunaId === actors[3].id)!.activeRole = "dosen";
       login(0);
       const response = await request();
       assert.equal(response.status, 200);
@@ -601,6 +608,20 @@ test("alur akademik menjalankan layanan dan entry point aktual dengan database s
       login(3); assert.match(content(await render()), /CATATAN_INTERNAL_UJI_12345/);
       login(1); assert.match(content(await render()), /CATATAN_INTERNAL_UJI_12345/);
       login(4); await assert.rejects(render, /notFound/);
+      const formerLecturer = fixture.tables.pengguna.find((item) => item.id === actors[3].id)!;
+      formerLecturer.role = "admin_keuangan";
+      const live = fixture.tables.authSession.find((item) => item.penggunaId === actors[3].id)!;
+      live.activeRole = "admin_keuangan";
+      login(3); await assert.rejects(render, /notFound/);
+      assert.ok(formerLecturer.dosen);
+      const { scopedTitles } = await import("../src/lib/academic/views");
+      const account = formerLecturer as unknown as Account;
+      assert.equal((await fixture.db.pengajuanJudul.findMany({ where: scopedTitles(account, false) })).length, 0);
+      assert.equal((await fixture.db.bimbingan.findMany({ where: { pengajuan: scopedTitles(account, false) } })).length, 0);
+      formerLecturer.role = "dosen";
+      live.activeRole = "dosen";
+      assert.equal((await fixture.db.pengajuanJudul.findMany({ where: scopedTitles(account, false) })).length, 1);
+      assert.match(content(await render()), /CATATAN_INTERNAL_UJI_12345/);
     } finally { cookiesMock.mock.restore(); }
   });
 });

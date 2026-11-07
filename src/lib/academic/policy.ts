@@ -29,8 +29,12 @@ export function isAssigned(userId: bigint, b: Pick<Bimbingan, "idDosenPembimbing
   return userId === b.idDosenPembimbing || userId === b.idDosenPembimbing2;
 }
 
+export function isLecturer(user: Account) {
+  return Boolean(user.dosen && ["dosen", "kaprodi", "sekpro"].includes(user.role));
+}
+
 export function canReadTitle(user: Account, role: Role, title: Pick<PengajuanJudul, "idMahasiswa">, b: Bimbingan | null) {
-  return user.id === title.idMahasiswa || canManage(user, role) || Boolean(b && isAssigned(user.id, b));
+  return user.id === title.idMahasiswa || canManage(user, role) || Boolean(isLecturer(user) && b && isAssigned(user.id, b));
 }
 
 export function currentTitle(title: Pick<PengajuanJudul, "deletedAt" | "isDiarsipkan" | "status">) {

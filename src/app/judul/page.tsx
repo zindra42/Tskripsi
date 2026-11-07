@@ -12,7 +12,7 @@ export default async function TitlesPage({ searchParams }: { searchParams: Promi
   const params = await searchParams;
   const page = pageNumber(params.page);
   const query = (params.q ?? "").trim().slice(0, 255);
-  const rows = await database().pengajuanJudul.findMany({ where: { ...scopedTitles(actor.id, manager), deletedAt: null,
+  const rows = await database().pengajuanJudul.findMany({ where: { ...scopedTitles(actor, manager), deletedAt: null,
     ...(query ? { judul: { contains: query, mode: "insensitive" } } : {}),
   }, include: { mahasiswa: { select: { nama: true } } }, orderBy: { id: "desc" }, take: 21, skip: (page - 1) * 20 });
   const options = actor.role === "mahasiswa" ? await titleOptions() : null;

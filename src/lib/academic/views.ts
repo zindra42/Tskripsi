@@ -2,12 +2,13 @@ import "server-only";
 import { notFound, redirect } from "next/navigation";
 import { database } from "@/lib/db";
 import { requireSession } from "@/lib/auth/session";
-import { accountSelect } from "@/lib/accounts/store";
+import { accountSelect, type Account } from "@/lib/accounts/store";
 import { canManage } from "@/lib/accounts/policy";
 import { canAuthenticate } from "@/lib/auth/policy";
 import type { Prisma } from "@/generated/prisma/client";
 import { recommendationScore } from "./similarity";
 import { supervisorLoad } from "./store";
+import { isLecturer } from "./policy";
 
 export async function academicViewer() {
   const session = await requireSession();
@@ -17,8 +18,10 @@ export async function academicViewer() {
     finance: actor.role === "admin_keuangan" || actor.role === "superadmin" };
 }
 
-export function scopedTitles(actorId: bigint, manager: boolean): Prisma.PengajuanJudulWhereInput {
-  return manager ? {} : { OR: [{ idMahasiswa: actorId }, { bimbingan: { OR: [{ idDosenPembimbing: actorId }, { idDosenPembimbing2: actorId }] } }] };
+export function scopedTitles(actor: Account, manager: boolean): Prisma.PengajuanJudulWhereInput {
+  if (manager) return {};
+  const owner = { idMahasiswa: actor.id };
+  return isLecturer(actor) ? { OR: [owner, { bimbingan: { OR: [{ idDosenPembimbing: actor.id }, { idDosenPembimbing2: actor.id }] } }] } : owner;
 }
 
 export async function titleOptions() {
