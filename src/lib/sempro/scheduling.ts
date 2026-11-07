@@ -1,4 +1,5 @@
 import "server-only";
+import { checkConflicts } from "@/lib/sidang/scheduling";
 import { Prisma } from "@/generated/prisma/client";
 import { ensure } from "@/lib/accounts/store";
 import {
@@ -124,6 +125,8 @@ export async function aturJadwalSempro(
   ensure(p1Id && p2Id, "Penguji belum lengkap.");
 
   const dateObj = new Date(tanggalStr);
+  await checkConflicts(context, { tanggal: tanggalStr, mulai: waktuMulai, selesai: waktuSelesai, ruang },
+    [p1Id, p2Id, pembimbingId], { sempro: sempro.jadwal?.id });
 
   // Check room conflict
   const existingRoomSchedules = await context.tx.jadwalSempro.findMany({

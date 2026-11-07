@@ -1,0 +1,25 @@
+url: http://127.0.0.1:3106
+name: sidang-guest
+tags:
+  - sidang
+  - pengumuman
+  - guest
+---
+- launchApp
+- openLink: http://127.0.0.1:3106/pengumuman-publik
+- assertVisible: Pengumuman publik SIAS
+- assertVisible: Layanan pengumuman belum tersedia. Silakan coba kembali nanti.
+- tapOn: Masuk SIAS
+- assertVisible: Selamat datang kembali
+- openLink: http://127.0.0.1:3106/sidang
+- assertVisible: Selamat datang kembali
+- openLink: http://127.0.0.1:3106/sidang/1
+- assertVisible: Selamat datang kembali
+- openLink: http://127.0.0.1:3106/pengumuman
+- assertVisible: Selamat datang kembali
+- openLink: http://127.0.0.1:3106/pengumuman/kelola
+- assertVisible: Selamat datang kembali
+- openLink: http://127.0.0.1:3106/koreksi-proses
+- assertVisible: Selamat datang kembali
+- openLink: http://127.0.0.1:3106/audit
+- assertVisible: Selamat datang kembali

@@ -15,10 +15,11 @@ export async function getOrCreateNomorDasar(tx: Tx, pengajuanId: bigint) {
   });
   if (!nomorDasar) {
     const currentYear = new Date().getFullYear();
-    const countThisYear = await tx.nomorSuratDasar.count({
-      where: { tahun: currentYear },
+    // Imported allocations may be sparse. Counting rows would reuse an existing number.
+    const lastAllocation = await tx.nomorSuratDasar.findFirst({
+      where: { tahun: currentYear }, orderBy: { nomorUrut: "desc" },
     });
-    const nextUrut = countThisYear + 1;
+    const nextUrut = (lastAllocation?.nomorUrut ?? 0) + 1;
 
     nomorDasar = await tx.nomorSuratDasar.create({
       data: {

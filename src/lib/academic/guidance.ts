@@ -50,11 +50,14 @@ export async function acc(context: Context, input: Input, cancel: boolean) {
   const existing = await tx.dokumenVerifikasi.findFirst({ where: { idBimbingan: b.id, penandatanganUserId: actor.id, jenisDokumen, status: "sah" } });
   if (cancel) {
     ensure(existing, "ACC aktif tidak ditemukan.");
-    // Sidang registration locks are added by its lifecycle. Until then only sempro cancellation is exposed.
-    ensure(phase === "sempro", "Pembatalan ACC sidang memerlukan pemeriksaan pendaftaran pada modul sidang.");
+    if (phase === "skripsi") ensure(!await tx.pendaftaranSidang.findFirst({ where: {
+      idPengajuan: b.idPengajuan, siklusKe: b.siklusKe, statusDraft: "diajukan",
+    } }), "ACC Sidang sudah digunakan untuk pendaftaran resmi dan tidak dapat dicabut.");
     const note = reason.parse(input.reason);
     await tx.dokumenVerifikasi.update({ where: { id: existing.id }, data: { status: "dicabut", dicabutAt: new Date(), dicabutOlehId: actor.id, alasanPencabutan: note, updatedAt: new Date() } });
-    await event(context, "acc_sempro_dibatalkan", `dokumen:${existing.id}`, existing, { status: "dicabut", note }, [b.pengajuan.idMahasiswa], note, `/bimbingan/${b.id}`);
+    if (phase === "skripsi") await tx.checklistDokumen.updateMany({ where: { nomorItem: 3,
+      sidang: { idPengajuan: b.idPengajuan, siklusKe: b.siklusKe } }, data: { statusItem: "kosong", updatedAt: new Date() } });
+    await event(context, phase === "sempro" ? "acc_sempro_dibatalkan" : "acc_sidang_dibatalkan", `dokumen:${existing.id}`, existing, { status: "dicabut", note }, [b.pengajuan.idMahasiswa], note, `/bimbingan/${b.id}`);
     return;
   }
   if (existing) return;

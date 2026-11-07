@@ -79,6 +79,13 @@ model Pengguna {
   examiner1Decisions BeritaAcara[] @relation("Examiner1Leader")
   studentRevisions RevisiDokumen[] @relation("StudentRevision")
   rejectedRevisions RevisiDokumen[] @relation("RevisionRejecter")
+  sidangSupervisions PendaftaranSidang[] @relation("SidangSupervisor")
+  sidangReviews PendaftaranSidang[] @relation("SidangVerifier")
+  sidangConfirmations KonfirmasiJadwalSidang[] @relation("SidangConfirmer")
+  sidangScores PenilaianSidang[] @relation("SidangScorer")
+  finalPayments PembayaranSidang[] @relation("FinalPaymentOwner")
+  finalPaymentReviews PembayaranSidang[] @relation("FinalPaymentReviewer")
+  announcementReads PengumumanDibaca[]
 
   @@map("pengguna")
 }
@@ -366,6 +373,7 @@ model PengajuanJudul {
   bidang2 BidangKeahlian? @relation("TitleField2", fields: [bidangKeahlian2Id], references: [id], onDelete: SetNull)
   bimbingan Bimbingan?
   sempro PendaftaranSempro?
+  sidangList PendaftaranSidang[]
   nomorSuratDasar NomorSuratDasar?
   documents DokumenVerifikasi[]
   @@index([idMahasiswa, isDiarsipkan, deletedAt])
@@ -524,6 +532,8 @@ model DokumenVerifikasi {
   bimbingan Bimbingan? @relation(fields: [idBimbingan], references: [id], onDelete: Restrict)
   sempro PendaftaranSempro? @relation(fields: [idSempro], references: [id], onDelete: Restrict)
   jadwalSempro JadwalSempro? @relation(fields: [idJadwal], references: [id], onDelete: Restrict)
+  sidang PendaftaranSidang? @relation(fields: [idSidang], references: [id], onDelete: Restrict)
+  jadwalSidang JadwalSidang? @relation(fields: [idJadwalSidang], references: [id], onDelete: Restrict)
   signer Pengguna? @relation("DocumentSigner", fields: [penandatanganUserId], references: [id], onDelete: SetNull)
   revoker Pengguna? @relation("DocumentRevoker", fields: [dicabutOlehId], references: [id], onDelete: SetNull)
   replacement DokumenVerifikasi? @relation("DocumentReplacement", fields: [digantikanOlehId], references: [id], onDelete: SetNull)
@@ -575,6 +585,7 @@ model AcademicReceipt {
 
 model PendaftaranSempro {
   id BigInt @id @default(autoincrement())
+  siklusKe Int @default(1) @map("siklus_ke") @db.SmallInt
   idPengajuan BigInt @unique @map("id_pengajuan")
   idDosenPembimbingSempro BigInt? @map("id_dosen_pembimbing_sempro")
   idAcc BigInt? @map("id_acc")
@@ -619,13 +630,17 @@ model ChecklistDokumen {
   statusUnggahan String? @map("status_unggahan") @db.VarChar(50)
   statusItem String @default("kosong") @map("status_item") @db.VarChar(20)
   catatanVerifikator String? @map("catatan_verifikator")
+  lastVerifierId BigInt? @map("last_verifier_id")
+  lastVerifierRole String? @map("last_verifier_role") @db.VarChar(30)
   tenggatPascaSempro DateTime? @map("tenggat_pasca_sempro") @db.Timestamp(0)
   createdAt DateTime? @map("created_at") @db.Timestamp(0)
   updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
 
   sempro PendaftaranSempro? @relation(fields: [idSempro], references: [id], onDelete: Cascade)
+  sidang PendaftaranSidang? @relation(fields: [idSidangDaftar], references: [id], onDelete: Restrict)
 
   @@index([idSempro, nomorItem])
+  @@index([idSidangDaftar, nomorItem])
   @@map("checklist_dokumen")
 }
 
@@ -640,13 +655,30 @@ model PenugasanPenguji {
   statusApproval String @default("menunggu") @map("status_approval") @db.VarChar(20)
   catatan String?
   isPengganti Boolean @default(false) @map("is_pengganti")
+  // Source assessment/tolerance columns remain available for historical import.
+  nilaiPresentasi Int? @map("nilai_presentasi") @db.SmallInt
+  nilaiAlatBantu Int? @map("nilai_alat_bantu") @db.SmallInt
+  nilaiPenampilan Int? @map("nilai_penampilan") @db.SmallInt
+  nilaiPenguasaanMateri Int? @map("nilai_penguasaan_materi") @db.SmallInt
+  nilaiKelayakanProposal Int? @map("nilai_kelayakan_proposal") @db.SmallInt
+  nilaiTotal Decimal? @map("nilai_total") @db.Decimal(5, 2)
+  catatanPenilaian String? @map("catatan_penilaian")
+  statusDinilai Boolean @default(false) @map("status_dinilai")
+  tanggalDinilai DateTime? @map("tanggal_dinilai") @db.Timestamp(0)
+  perluRevisi Boolean @default(false) @map("perlu_revisi")
+  catatanRevisi String? @map("catatan_revisi")
+  statusIzinSusulan String @default("tidak_ada") @map("status_izin_susulan") @db.VarChar(30)
+  izinBerlakuSampai DateTime? @map("izin_berlaku_sampai") @db.Timestamp(0)
+  alasanSusulan String? @map("alasan_susulan")
   createdAt DateTime? @map("created_at") @db.Timestamp(0)
   updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
 
   sempro PendaftaranSempro? @relation(fields: [idSempro], references: [id], onDelete: Cascade)
   dosen Pengguna @relation("ExaminerAssignment", fields: [idDosenPenguji], references: [id], onDelete: Cascade)
+  sidang PendaftaranSidang? @relation(fields: [idSidangDaftar], references: [id], onDelete: Restrict)
 
   @@index([idSempro, nomorPenguji])
+  @@index([idSidangDaftar, nomorPenguji])
   @@index([idDosenPenguji, statusApproval])
   @@map("penugasan_penguji")
 }
@@ -773,6 +805,20 @@ model DispensasiKehadiranSempro {
 
 model BeritaAcara {
   id BigInt @id @default(autoincrement())
+  jenis String @default("sempro") @db.VarChar(20)
+  nilaiPembimbing Decimal? @map("nilai_pembimbing") @db.Decimal(5, 2)
+  predikatHuruf String? @map("predikat_huruf") @db.VarChar(5)
+  saranHasil String? @map("saran_hasil") @db.VarChar(30)
+  isOverrideSaran Boolean @default(false) @map("is_override_saran")
+  alasanOverride String? @map("alasan_override")
+  ditetapkanOlehId BigInt? @map("ditetapkan_oleh_id")
+  ditetapkanAt DateTime? @map("ditetapkan_at") @db.Timestamp(0)
+  isLocked Boolean @default(false) @map("is_locked")
+  snapshotKeputusan Json? @map("snapshot_keputusan")
+  snapshotData Json? @map("snapshot_data")
+  sourceHasil String? @map("source_hasil") @db.VarChar(50)
+  sourceStatusPersetujuan String? @map("source_status_persetujuan") @db.VarChar(50)
+  transformProvenance Json? @map("transform_provenance")
   idJadwal BigInt? @unique @map("id_jadwal")
   idJadwalSidang BigInt? @map("id_jadwal_sidang")
   penguji1Id BigInt? @map("penguji_1_id")
@@ -815,6 +861,7 @@ model BeritaAcara {
   updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
 
   jadwal JadwalSempro? @relation(fields: [idJadwal], references: [id], onDelete: Cascade)
+  jadwalSidang JadwalSidang? @relation(fields: [idJadwalSidang], references: [id], onDelete: Restrict)
   penguji1 Pengguna? @relation("Examiner1Leader", fields: [penguji1Id], references: [id], onDelete: SetNull)
   revisiList RevisiDokumen[]
 
@@ -880,4 +927,237 @@ model NomorSuratKategori {
 
   @@unique([idNomorDasar, kategori], map: "uq_nomor_kategori_dasar")
   @@map("nomor_surat_kategori")
+}
+
+model PendaftaranSidang {
+  id BigInt @id @default(autoincrement())
+  idPengajuan BigInt @map("id_pengajuan")
+  idDosenPembimbingSidang BigInt? @map("id_dosen_pembimbing_sidang")
+  siklusKe Int @default(1) @map("siklus_ke") @db.SmallInt
+  ipk Decimal? @db.Decimal(3, 2)
+  fileTranskrip String? @map("file_transkrip") @db.VarChar(255)
+  fileNaskah String? @map("file_naskah") @db.VarChar(255)
+  statusDraft String @default("draft") @map("status_draft") @db.VarChar(20)
+  statusBerkas String @default("draft") @map("status_berkas") @db.VarChar(30)
+  catatanVerifikasi String? @map("catatan_verifikasi")
+  tanggalDaftar DateTime? @map("tanggal_daftar") @db.Timestamp(0)
+  tanggalSubmit DateTime? @map("tanggal_submit") @db.Timestamp(0)
+  diverifikasiAt DateTime? @map("diverifikasi_at") @db.Timestamp(0)
+  diverifikasiOlehId BigInt? @map("diverifikasi_oleh_id")
+  statusFisik String? @map("status_fisik") @db.VarChar(30)
+  periodeSnapshot String? @map("periode_snapshot") @db.VarChar(255)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  pengajuan PengajuanJudul @relation(fields: [idPengajuan], references: [id], onDelete: Restrict)
+  pembimbing Pengguna? @relation("SidangSupervisor", fields: [idDosenPembimbingSidang], references: [id], onDelete: Restrict)
+  verifikator Pengguna? @relation("SidangVerifier", fields: [diverifikasiOlehId], references: [id], onDelete: Restrict)
+  checklist ChecklistDokumen[]
+  penguji PenugasanPenguji[]
+  jadwalList JadwalSidang[]
+  pembayaranList PembayaranSidang[]
+  documents DokumenVerifikasi[]
+  // Source only indexes this pair: preserve duplicates for reconciliation, reject new duplicates in the locked service.
+  @@index([idPengajuan, siklusKe])
+  @@index([statusBerkas])
+  @@map("pendaftaran_sidang")
+}
+
+model PembayaranSidang {
+  id BigInt @id @default(autoincrement())
+  idPendaftaranSidang BigInt? @map("id_pendaftaran_sidang")
+  idMahasiswa BigInt @map("id_mahasiswa")
+  idAdminKeuangan BigInt? @map("id_admin_keuangan")
+  siklusKe Int @default(1) @map("siklus_ke") @db.SmallInt
+  periode String? @db.VarChar(100)
+  fileKwitansi String? @map("file_kwitansi") @db.VarChar(255)
+  fileKrsSka String? @map("file_krs_ska") @db.VarChar(255)
+  fileBuktiTransfer String? @map("file_bukti_transfer") @db.VarChar(255)
+  tanggalTransfer DateTime? @map("tanggal_transfer") @db.Date
+  namaPengirim String? @map("nama_pengirim") @db.VarChar(255)
+  pernahAmbilSkripsiSebelumnya Boolean @default(false) @map("pernah_ambil_skripsi_sebelumnya")
+  jumlahSemesterSebelumnya Int @default(0) @map("jumlah_semester_sebelumnya") @db.SmallInt
+  berkasSemesterSebelumnya Json? @map("berkas_semester_sebelumnya")
+  statusVerifikasi String @default("menunggu_verifikasi") @map("status_verifikasi") @db.VarChar(30)
+  catatanPenolakan String? @map("catatan_penolakan")
+  perluVerifikasiUlang Boolean @default(false) @map("perlu_verifikasi_ulang")
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  sidang PendaftaranSidang? @relation(fields: [idPendaftaranSidang], references: [id], onDelete: Restrict)
+  mahasiswa Pengguna @relation("FinalPaymentOwner", fields: [idMahasiswa], references: [id], onDelete: Restrict)
+  reviewer Pengguna? @relation("FinalPaymentReviewer", fields: [idAdminKeuangan], references: [id], onDelete: Restrict)
+  @@index([idMahasiswa, siklusKe])
+  @@map("pembayaran_sidang")
+}
+
+model JadwalSidang {
+  id BigInt @id @default(autoincrement())
+  idSidang BigInt @map("id_sidang")
+  versi Int @default(1) @db.SmallInt
+  status String @default("draft") @db.VarChar(30)
+  tanggal DateTime? @db.Date
+  waktuMulai String? @map("waktu_mulai") @db.VarChar(10)
+  waktuSelesai String? @map("waktu_selesai") @db.VarChar(10)
+  ruang String @default("Ruang Seminar FRS") @db.VarChar(255)
+  diterbitkanAt DateTime? @map("diterbitkan_at") @db.Timestamp(0)
+  revisiUndangan Int @default(0) @map("revisi_undangan") @db.SmallInt
+  statusKonfirmasiDosen String @default("menunggu") @map("status_konfirmasi_dosen") @db.VarChar(30)
+  statusPelaksanaan String @default("terjadwal") @map("status_pelaksanaan") @db.VarChar(30)
+  pengujiDikonfirmasiUlang Boolean @default(false) @map("penguji_dikonfirmasi_ulang")
+  dewanSnapshot Json? @map("dewan_snapshot")
+  periodeSnapshot String? @map("periode_snapshot") @db.VarChar(255)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  sidang PendaftaranSidang @relation(fields: [idSidang], references: [id], onDelete: Restrict)
+  konfirmasiList KonfirmasiJadwalSidang[]
+  riwayatList RiwayatJadwalSidang[]
+  permohonanList PermohonanSidang[]
+  penilaianList PenilaianSidang[]
+  beritaAcaraList BeritaAcara[]
+  documents DokumenVerifikasi[]
+  @@index([idSidang, status])
+  @@index([tanggal, ruang])
+  @@map("jadwal_sidang")
+}
+
+model KonfirmasiJadwalSidang {
+  id BigInt @id @default(autoincrement())
+  jadwalSidangId BigInt @map("jadwal_sidang_id")
+  versi Int @default(1) @db.SmallInt
+  dosenId BigInt @map("dosen_id")
+  peran String @db.VarChar(30)
+  status String @default("menunggu") @db.VarChar(30)
+  tipePenolakan String? @map("tipe_penolakan") @db.VarChar(30)
+  idDosenPenggantiUsulan BigInt? @map("id_dosen_pengganti_usulan")
+  usulanTanggal DateTime? @map("usulan_tanggal") @db.Date
+  usulanWaktuMulai String? @map("usulan_waktu_mulai") @db.VarChar(10)
+  usulanWaktuSelesai String? @map("usulan_waktu_selesai") @db.VarChar(10)
+  slotUsulan Json? @map("slot_usulan")
+  catatan String?
+  ditetapkanKaprodi Boolean @default(false) @map("ditetapkan_kaprodi")
+  respondedAt DateTime? @map("responded_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  jadwal JadwalSidang @relation(fields: [jadwalSidangId], references: [id], onDelete: Restrict)
+  dosen Pengguna @relation("SidangConfirmer", fields: [dosenId], references: [id], onDelete: Restrict)
+  permohonanList PermohonanSidang[]
+  @@index([jadwalSidangId, versi, dosenId])
+  @@map("konfirmasi_jadwal_sidang")
+}
+
+model RiwayatJadwalSidang {
+  id BigInt @id @default(autoincrement())
+  jadwalSidangId BigInt @map("jadwal_sidang_id")
+  versi Int
+  tanggal DateTime? @db.Date
+  jamMulai String? @map("jam_mulai") @db.VarChar(10)
+  jamSelesai String? @map("jam_selesai") @db.VarChar(10)
+  ruang String? @db.VarChar(255)
+  alasanPerubahan String? @map("alasan_perubahan")
+  diubahOleh BigInt? @map("diubah_oleh")
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  jadwal JadwalSidang @relation(fields: [jadwalSidangId], references: [id], onDelete: Restrict)
+  @@index([jadwalSidangId, versi])
+  @@map("riwayat_jadwal_sidang")
+}
+
+model PermohonanSidang {
+  id BigInt @id @default(autoincrement())
+  jadwalSidangId BigInt @map("jadwal_sidang_id")
+  konfirmasiId BigInt? @map("konfirmasi_id")
+  versiJadwal Int @default(1) @map("versi_jadwal")
+  jenis String @db.VarChar(30)
+  pemohonTipe String @map("pemohon_tipe") @db.VarChar(20)
+  pemohonUserId BigInt @map("pemohon_user_id")
+  alasan String
+  dosenPenggantiId BigInt? @map("dosen_pengganti_id")
+  slotUsulan Json? @map("slot_usulan")
+  status String @default("menunggu") @db.VarChar(30)
+  aktifKey String? @unique @map("aktif_key") @db.VarChar(100)
+  keputusanOleh BigInt? @map("keputusan_oleh")
+  alasanKeputusan String? @map("alasan_keputusan")
+  diputuskanAt DateTime? @map("diputuskan_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  jadwal JadwalSidang @relation(fields: [jadwalSidangId], references: [id], onDelete: Restrict)
+  konfirmasi KonfirmasiJadwalSidang? @relation(fields: [konfirmasiId], references: [id], onDelete: Restrict)
+  @@index([jadwalSidangId, versiJadwal])
+  @@map("permohonan_sidang")
+}
+
+model RubrikPenilaian {
+  id BigInt @id @default(autoincrement())
+  jenis String @default("sidang") @db.VarChar(30)
+  kode String @db.VarChar(10)
+  komponen String @db.VarChar(255)
+  bobot Int @db.SmallInt
+  keterangan String?
+  urutan Int @default(1) @db.SmallInt
+  isAktif Boolean @default(true) @map("is_aktif")
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  @@index([jenis, isAktif])
+  @@map("rubrik_penilaian")
+}
+
+model PenilaianSidang {
+  id BigInt @id @default(autoincrement())
+  idJadwalSidang BigInt @map("id_jadwal_sidang")
+  penilaiId BigInt @map("penilai_id")
+  peran String @db.VarChar(30)
+  nilaiKomponen Json? @map("nilai_komponen")
+  nilaiAkhir Decimal @default(0) @map("nilai_akhir") @db.Decimal(5, 2)
+  perluRevisi Boolean @default(false) @map("perlu_revisi")
+  catatanRevisi String? @map("catatan_revisi")
+  catatanUmum String? @map("catatan_umum")
+  status String @default("draft") @db.VarChar(30)
+  disimpanAt DateTime? @map("disimpan_at") @db.Timestamp(0)
+  izinSusulan Boolean @default(false) @map("izin_susulan")
+  izinBerlakuSampai DateTime? @map("izin_berlaku_sampai") @db.Timestamp(0)
+  diizinkanOlehId BigInt? @map("diizinkan_oleh_id")
+  rubrikSnapshot Json? @map("rubrik_snapshot")
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  jadwal JadwalSidang @relation(fields: [idJadwalSidang], references: [id], onDelete: Restrict)
+  penilai Pengguna @relation("SidangScorer", fields: [penilaiId], references: [id], onDelete: Restrict)
+  @@unique([idJadwalSidang, penilaiId])
+  @@map("penilaian_sidang")
+}
+
+model Pengumuman {
+  id BigInt @id @default(autoincrement())
+  judul String @db.VarChar(150)
+  isi String
+  lampiranPath String? @map("lampiran_path") @db.VarChar(500)
+  lampiranNama String? @map("lampiran_nama") @db.VarChar(255)
+  kategori String @default("umum") @db.VarChar(20)
+  targetPeran Json @map("target_peran")
+  isPublik Boolean @default(false) @map("is_publik")
+  status String @default("draft") @db.VarChar(20)
+  disematkan Boolean @default(false)
+  tampilMulai DateTime? @map("tampil_mulai") @db.Timestamp(0)
+  tampilSelesai DateTime? @map("tampil_selesai") @db.Timestamp(0)
+  dibuatOleh BigInt? @map("dibuat_oleh")
+  diubahOleh BigInt? @map("diubah_oleh")
+  terbitAt DateTime? @map("terbit_at") @db.Timestamp(0)
+  notifikasiDikirimAt DateTime? @map("notifikasi_dikirim_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp(0)
+  dibacaList PengumumanDibaca[]
+  @@index([status, tampilMulai, tampilSelesai])
+  @@map("pengumuman")
+}
+
+model PengumumanDibaca {
+  id BigInt @id @default(autoincrement())
+  pengumumanId BigInt @map("pengumuman_id")
+  penggunaId BigInt @map("pengguna_id")
+  dibacaAt DateTime @map("dibaca_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  pengumuman Pengumuman @relation(fields: [pengumumanId], references: [id], onDelete: Restrict)
+  pengguna Pengguna @relation(fields: [penggunaId], references: [id], onDelete: Restrict)
+  @@unique([pengumumanId, penggunaId])
+  @@map("pengumuman_dibaca")
 }

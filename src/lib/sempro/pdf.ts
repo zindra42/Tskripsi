@@ -12,6 +12,11 @@ function escapePdf(text: string): string {
 
 export class SimplePdfDocument {
   private contentOps: string[] = [];
+  private completedPages: string[][] = [];
+  addPage() {
+    this.completedPages.push(this.contentOps);
+    this.contentOps = [];
+  }
   public width = 595.28; // A4 width in pt
   public height = 841.89; // A4 height in pt
 
@@ -89,8 +94,8 @@ export class SimplePdfDocument {
   }
 
   build(): Buffer {
-    const streamContent = this.contentOps.join("\n");
-    const streamLen = Buffer.byteLength(streamContent, "ascii");
+    const pages = [...this.completedPages, this.contentOps];
+    const streams = pages.map((page) => page.join("\n"));
 
     const objects: string[] = [];
     const offsets: number[] = [];
@@ -115,15 +120,21 @@ export class SimplePdfDocument {
     // Obj 1: Catalog
     addObject("<< /Type /Catalog /Pages 2 0 R >>");
     // Obj 2: Pages
-    addObject("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+    const refs = pages.map((_, i) => `${i === 0 ? 3 : 5 + i * 2} 0 R`).join(" ");
+    addObject(`<< /Type /Pages /Kids [${refs}] /Count ${pages.length} >>`);
     // Obj 3: Page
     addObject("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>");
     // Obj 4: Content Stream
-    addObject(`<< /Length ${streamLen} >>\nstream\n${streamContent}\nendstream`);
+    addObject(`<< /Length ${Buffer.byteLength(streams[0], "latin1")} >>\nstream\n${streams[0]}\nendstream`);
     // Obj 5: Font F1 (Helvetica)
     addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
     // Obj 6: Font F2 (Helvetica-Bold)
     addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
+    for (let i = 1; i < streams.length; i++) {
+      const contentId = 6 + i * 2;
+      addObject(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Contents ${contentId} 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>`);
+      addObject(`<< /Length ${Buffer.byteLength(streams[i], "latin1")} >>\nstream\n${streams[i]}\nendstream`);
+    }
 
     // XRef table
     const startXref = currentOffset;

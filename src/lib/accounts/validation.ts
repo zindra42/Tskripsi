@@ -48,6 +48,9 @@ export const settingDefinitions = {
   threshold_peringatan_plagiasi: { label: "Batas peringatan kemiripan (%)", default: "35", min: 1, max: 100 },
   tenggat_revisi_sempro_hari: { label: "Tenggat revisi sempro (hari)", default: "14", min: 1, max: 90 },
   tenggat_revisi_sidang_hari: { label: "Tenggat revisi sidang (hari)", default: "14", min: 1, max: 90 },
+  metode_bobot_sidang: { label: "Metode rekap nilai sidang", default: "rekap_rata_rata", options: ["rekap_rata_rata", "proporsional_34_33_33"] },
+  nilai_batas_lulus_sidang: { label: "Nilai minimal lulus sidang", default: "51", min: 0, max: 100 },
+  sidang_min_hari_sebelum: { label: "Batas pengajuan perubahan sidang (hari)", default: "2", min: 0, max: 30 },
 };
 
 export function validateSettings(input: Record<string, unknown>) {

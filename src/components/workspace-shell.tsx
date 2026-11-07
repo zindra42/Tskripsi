@@ -46,6 +46,9 @@ export function WorkspaceShell({ session, children }: {
               <Link href="/sempro/hasil" className="block text-sm text-slate-600 hover:underline">Hasil kelulusan sempro</Link>
             </>}
             <Link href="/notifikasi" className="block text-sm text-slate-600 hover:underline">Notifikasi</Link>
+            {(session.user.role === "mahasiswa" || session.user.role === "superadmin" || session.user.dosen && ["dosen", "kaprodi", "sekpro"].includes(session.user.role)) && <Link href="/sidang" className="block text-sm text-slate-600 hover:underline">Sidang dan revisi akhir</Link>}
+            <Link href="/pengumuman" className="block text-sm text-slate-600 hover:underline">Pengumuman</Link>
+            {session.user.role === "superadmin" && <><Link href="/koreksi-proses" className="block text-sm text-slate-600 hover:underline">Koreksi proses</Link><Link href="/audit" className="block text-sm text-slate-600 hover:underline">Audit aktivitas</Link></>}
             {canManage(session.user, session.activeRole) && <>
               <Link href="/akun" className="block text-sm text-slate-600 hover:underline">Kelola dan setujui akun</Link>
               <Link href="/akun/permohonan" className="block text-sm text-slate-600 hover:underline">Permohonan akun</Link>

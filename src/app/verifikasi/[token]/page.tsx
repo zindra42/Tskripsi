@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
+import { maskNim } from "@/lib/sempro/policy";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ export default async function PublicVerificationPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) notFound();
   const doc = await prisma.dokumenVerifikasi.findUnique({
     where: { token },
     include: {
@@ -80,7 +82,7 @@ export default async function PublicVerificationPage({
           <div className="py-2">
             <span className="text-slate-500">Mahasiswa Pemilik:</span>
             <p className="font-semibold text-slate-900">{String(data.mahasiswaNama ?? doc.pengajuan?.mahasiswa.nama ?? "-")}</p>
-            <p className="text-slate-500">NIM: {String(data.mahasiswaNim ?? "-")}</p>
+            <p className="text-slate-500">NIM: {maskNim(String(data.mahasiswaNim ?? "-"))}</p>
           </div>
           <div className="py-2">
             <span className="text-slate-500">Judul Proposal:</span>
@@ -106,7 +108,7 @@ export default async function PublicVerificationPage({
 
         <div className="mt-6 text-center">
           <a
-            href={`/api/sempro/dokumen/${doc.token}`}
+            href={`/api/${doc.jenisDokumen.includes("sidang") ? "sidang" : "sempro"}/dokumen/${doc.token}`}
             className="inline-flex items-center gap-1.5 rounded-lg bg-sky-700 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-sky-800"
           >
             📄 Unduh Salinan PDF Resmi

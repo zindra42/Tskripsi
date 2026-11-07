@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { requireSession } from "@/lib/auth/session";
 import {
   renderSuratUndanganPdf,
   renderBeritaAcaraPdf,
@@ -9,12 +10,13 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
+  await requireSession();
   const { token } = await params;
   const doc = await prisma.dokumenVerifikasi.findUnique({
     where: { token },
   });
 
-  if (!doc) {
+  if (!doc || !["undangan", "berita_acara"].includes(doc.jenisDokumen)) {
     return new NextResponse("Dokumen tidak ditemukan.", { status: 404 });
   }
 
@@ -24,8 +26,7 @@ export async function GET(
   } else if (doc.jenisDokumen === "berita_acara") {
     pdfBytes = renderBeritaAcaraPdf(doc);
   } else {
-    // Default fallback
-    pdfBytes = renderBeritaAcaraPdf(doc);
+    return new NextResponse("Dokumen tidak ditemukan.", { status: 404 });
   }
 
   const filename = `${doc.jenisDokumen}_${token.slice(0, 8)}.pdf`;
@@ -34,7 +35,7 @@ export async function GET(
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename="${filename}"`,
-      "Cache-Control": "public, max-age=3600",
+      "Cache-Control": "private, no-store",
     },
   });
 }
