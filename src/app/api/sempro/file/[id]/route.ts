@@ -34,13 +34,17 @@ export async function GET(
 
   try {
     const bytes = await readStoredFile(item.filePindaian, ["private", "public"]);
-    const isPdf = item.filePindaian.endsWith(".pdf");
-    const contentType = isPdf ? "application/pdf" : "image/jpeg";
+    const isPdf = bytes.subarray(0, 5).toString() === "%PDF-";
+    const isPng = bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    const isJpg = bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
+    if (!isPdf && !isPng && !isJpg) return new NextResponse(null, { status: 415 });
+    const contentType = isPdf ? "application/pdf" : isPng ? "image/png" : "image/jpeg";
 
     return new NextResponse(new Uint8Array(bytes), {
       headers: {
         "Content-Type": contentType,
-        "Content-Disposition": `inline; filename="${item.namaDokumen.replace(/[^a-zA-Z0-9_-]/g, "_")}.${isPdf ? "pdf" : "jpg"}"`,
+        "Content-Disposition": `inline; filename="${item.namaDokumen.replace(/[^a-zA-Z0-9_-]/g, "_")}.${isPdf ? "pdf" : isPng ? "png" : "jpg"}"`,
+        "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
       },
     });
   } catch {

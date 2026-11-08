@@ -17,7 +17,7 @@ export async function GET(
   if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) return new NextResponse(null, { status: 404 });
   const doc = await accountTransaction(async (tx) => {
     const actor = await checkedActor(tx, session), live = await tx.authSession.findUniqueOrThrow({ where: { tokenHash: session.tokenHash } });
-    const doc = await tx.dokumenVerifikasi.findUnique({ where: { token }, include: { jadwalSempro: { include: { sempro: { include: { penguji: true } } } } } });
+    const doc = await tx.dokumenVerifikasi.findUnique({ where: { token }, include: { jadwalSempro: { include: { beritaAcara: true, sempro: { include: { penguji: true } } } } } });
     if (!doc || !["acc", "undangan", "form_nilai", "berita_acara"].includes(doc.jenisDokumen)) return null;
     const titleId = doc.idPengajuan ?? doc.jadwalSempro?.sempro?.idPengajuan;
     if (!titleId) return null;
@@ -27,7 +27,19 @@ export async function GET(
     const lecturer = actor.dosen && ["dosen", "kaprodi", "sekpro"].includes(actor.role);
     const evaluator = lecturer && ([title.bimbingan?.idDosenPembimbing, title.bimbingan?.idDosenPembimbing2].includes(actor.id)
       || doc.jadwalSempro?.sempro?.penguji.some((p) => !p.isPengganti && p.idDosenPenguji === actor.id));
-    if (!owner && !evaluator && !canManage(actor, live.activeRole)) return null;
+    const manager = canManage(actor, live.activeRole);
+    if (!owner && !evaluator && !manager && !(lecturer && doc.jenisDokumen === "undangan")) return null;
+    if (doc.jenisDokumen === "form_nilai" && !owner && !manager && actor.id !== doc.penandatanganUserId) return null;
+    if (doc.jenisDokumen === "berita_acara") {
+      const schedule = doc.jadwalSempro;
+      if (!schedule?.beritaAcara?.hasil || schedule.statusPelaksanaan !== "selesai") return null;
+      if (owner && schedule.tanggal && schedule.waktuSelesai) {
+        const date = schedule.tanggal.toISOString().slice(0, 10);
+        let end = new Date(`${date}T${schedule.waktuSelesai.length === 5 ? schedule.waktuSelesai + ":00" : schedule.waktuSelesai}+08:00`).getTime();
+        if (schedule.waktuMulai && schedule.waktuSelesai < schedule.waktuMulai) end += 86400000;
+        if (!Number.isFinite(end) || Date.now() <= end + 3600000) return null;
+      }
+    }
     return { ...doc, historical: await importedDocumentFile(tx, doc) };
   });
 
