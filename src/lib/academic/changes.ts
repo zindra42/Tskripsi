@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ensure, jsonValue } from "@/lib/accounts/store";
 import { idSchema } from "@/lib/accounts/validation";
 import { titleSchema, reason } from "./validation";
-import { similarity, similarityColumns } from "./similarity";
+import { preprocess, similarity, similarityColumns } from "./similarity";
 import { cancelSupervisor, event, guidanceRecord, managers, requireManager, requireStudent, requireSupervisor, type Context, type Input } from "./store";
 
 export async function submitChange(context: Context, input: Input) {
@@ -55,6 +55,12 @@ export async function decideChange(context: Context, input: Input, approve: bool
     return;
   }
   requireManager(context);
+  if (actor.role !== "superadmin" && actor.dosen?.prodi) {
+    const studentProdi = b.pengajuan.mahasiswa.mahasiswa?.prodi;
+    if (studentProdi && studentProdi.trim().toLowerCase() !== actor.dosen.prodi.trim().toLowerCase()) {
+      ensure(false, "Perubahan judul hanya dapat diproses oleh pengelola Program Studi yang bersangkutan.");
+    }
+  }
   ensure(row.status === "menunggu_kaprodi" && row.disetujuiDospem1 && (!b.idDosenPembimbing2 || row.disetujuiDospem2), "Persetujuan seluruh pembimbing belum lengkap.");
   ensure(row.judulLama === b.pengajuan.judul, "Snapshot judul telah berubah. Ajukan permohonan baru.");
   if (approve) {
@@ -69,6 +75,34 @@ export async function decideChange(context: Context, input: Input, approve: bool
       bidangKeahlianId: row.bidangKeahlianIdBaru, bidangKeahlian2Id: row.bidangKeahlian2IdBaru,
       ...(row.jenisPerubahan === "seminar_ulang" ? { counterPengajuan: { increment: 1 } } : {}), updatedAt: new Date(),
     } });
+    const keywords = preprocess(row.judulBaru, true);
+    const nim = b.pengajuan.mahasiswa.mahasiswa?.nim ?? null;
+    const existingArchive = nim
+      ? await tx.arsipJudulSkripsi.findFirst({ where: { nim } })
+      : await tx.arsipJudulSkripsi.findFirst({ where: { judul: row.judulLama } });
+    if (existingArchive) {
+      await tx.arsipJudulSkripsi.update({
+        where: { id: existingArchive.id },
+        data: {
+          judul: row.judulBaru,
+          keywords: keywords as unknown as object,
+          updatedAt: new Date(),
+        },
+      });
+    } else {
+      await tx.arsipJudulSkripsi.create({
+        data: {
+          judul: row.judulBaru,
+          namaPenulis: b.pengajuan.mahasiswa.nama ?? "Mahasiswa",
+          nim,
+          tahun: String(new Date().getFullYear()),
+          prodi: b.pengajuan.mahasiswa.mahasiswa?.prodi ?? actor.dosen?.prodi ?? "Informatika",
+          keywords: keywords as unknown as object,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+    }
   }
   const data = { status: approve ? "disetujui" : "ditolak_kaprodi", penyetujuId: actor.id, penyetujuRole: context.role === "sekpro" ? "sekpro" : "kaprodi",
     keputusanAt: new Date(), catatanKaprodi: note, updatedAt: new Date() };

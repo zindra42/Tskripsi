@@ -19,9 +19,9 @@ async function applyProfile(tx: Tx, user: Account, data: ProfileChanges) {
   await assertIdentities(tx, user.id, data);
   await tx.pengguna.update({ where: { id: user.id }, data: { nama: data.nama, email: data.email, updatedAt: new Date() } });
   if (user.role === "mahasiswa") {
-    await tx.mahasiswa.update({ where: { penggunaId: user.id }, data: { nim: data.nim, semester: data.semester, noHp: data.noHp, updatedAt: new Date() } });
+    await tx.mahasiswa.update({ where: { penggunaId: user.id }, data: { nim: data.nim, semester: data.semester, prodi: data.prodi, noHp: data.noHp, updatedAt: new Date() } });
   } else if (user.dosen) {
-    await tx.dosen.update({ where: { penggunaId: user.id }, data: { nidn: data.nidn, noHp: data.noHp, updatedAt: new Date() } });
+    await tx.dosen.update({ where: { penggunaId: user.id }, data: { nidn: data.nidn, prodi: data.prodi, noHp: data.noHp, updatedAt: new Date() } });
     if (data.bidang) await syncExpertise(tx, user.id, data.bidang);
   }
   if (data.email !== undefined && data.email !== user.email) await invalidateSessions(tx, user.id);

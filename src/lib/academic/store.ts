@@ -26,13 +26,13 @@ export function requireFinance(context: Context) {
 }
 
 export async function titleRecord(tx: Tx, id: bigint) {
-  const title = await tx.pengajuanJudul.findUnique({ where: { id }, include: { bimbingan: true, mahasiswa: { select: { statusAkun: true, deletedAt: true, role: true } } } });
+  const title = await tx.pengajuanJudul.findUnique({ where: { id }, include: { bimbingan: true, mahasiswa: { select: { id: true, nama: true, statusAkun: true, deletedAt: true, role: true, mahasiswa: true } } } });
   ensure(title, "Pengajuan tidak ditemukan.");
   return title;
 }
 
 export async function guidanceRecord(context: Context, id: bigint, writable = true) {
-  const b = await context.tx.bimbingan.findUnique({ where: { id }, include: { pengajuan: { include: { mahasiswa: { select: { statusAkun: true, deletedAt: true, role: true } } } } } });
+  const b = await context.tx.bimbingan.findUnique({ where: { id }, include: { pengajuan: { include: { mahasiswa: { select: { id: true, nama: true, statusAkun: true, deletedAt: true, role: true, mahasiswa: true } } } } } });
   ensure(b, "Bimbingan tidak ditemukan.");
   if (writable) ensure(currentTitle(b.pengajuan) && b.pengajuan.status === "disetujui"
     && b.pengajuan.mahasiswa.role === "mahasiswa" && b.pengajuan.mahasiswa.statusAkun === "aktif" && !b.pengajuan.mahasiswa.deletedAt,

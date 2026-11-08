@@ -15,7 +15,7 @@ export async function decideAccounts(session: AuthenticatedSession, ids: bigint[
       const target = await lockedAccount(tx, id);
       ensure(target.deletedAt === null && target.statusAkun === "menunggu_persetujuan", "Akun sudah diproses atau terhapus. Muat ulang daftar.");
       ensure(canDecideAccount(actor, target), "Persetujuan akun pimpinan memerlukan Kaprodi atau superadmin.");
-      if (approve && hasAuthority(target, "kaprodi")) await assertSingleKaprodi(tx, id);
+      if (approve && hasAuthority(target, "kaprodi")) await assertSingleKaprodi(tx, id, target.dosen?.prodi);
       await tx.pengguna.update({ where: { id }, data: { statusAkun: approve ? "aktif" : "ditolak", catatanPenolakan: approve ? null : reason } });
       if (approve && target.dosen) await tx.dosen.update({ where: { penggunaId: id }, data: { kuotaBimbingan: Number(settings.kuota_bimbingan_default ?? 10) } });
       await invalidateSessions(tx, id);
@@ -49,13 +49,13 @@ export async function changeAccountStatus(session: AuthenticatedSession, id: big
       const nidn = restoredIdentity(target.dosen?.nidn ?? null, target.dosen?.nidnArsip ?? null, "identifier");
       ensure(email && z.email().safeParse(email).success, "Email pemulihan tidak tersedia atau tidak valid.");
       await assertIdentities(tx, id, { email, nim, nidn });
-      if (hasAuthority(target, "kaprodi")) await assertSingleKaprodi(tx, id);
+      if (hasAuthority(target, "kaprodi")) await assertSingleKaprodi(tx, id, target.dosen?.prodi);
       await tx.pengguna.update({ where: { id }, data: { email, emailArsip: null, deletedAt: null, statusAkun: "aktif", catatanPenolakan: null } });
       if (target.mahasiswa) await tx.mahasiswa.update({ where: { penggunaId: id }, data: { nim, nimArsip: null } });
       if (target.dosen) await tx.dosen.update({ where: { penggunaId: id }, data: { nidn, nidnArsip: null } });
     } else {
       ensure(target.deletedAt === null && target.statusAkun === (action === "activate" ? "nonaktif" : "aktif"), "Status akun sudah berubah. Muat ulang daftar.");
-      if (action === "activate" && hasAuthority(target, "kaprodi")) await assertSingleKaprodi(tx, id);
+      if (action === "activate" && hasAuthority(target, "kaprodi")) await assertSingleKaprodi(tx, id, target.dosen?.prodi);
       await tx.pengguna.update({ where: { id }, data: { statusAkun: action === "activate" ? "aktif" : "nonaktif" } });
     }
     await invalidateSessions(tx, id);
@@ -76,7 +76,9 @@ export async function assignRole(session: AuthenticatedSession, id: bigint, inpu
     const before = identitySnapshot(target);
     if (data.role === "kaprodi") {
       const oldLeaders = await tx.pengguna.findMany({ where: {
-        id: { not: id }, OR: [{ role: "kaprodi" }, { role: "dosen", dosen: { isKaprodi: true } }],
+        id: { not: id },
+        ...(target.dosen?.prodi ? { dosen: { prodi: target.dosen.prodi } } : {}),
+        OR: [{ role: "kaprodi" }, { role: "dosen", dosen: { isKaprodi: true } }],
       }, select: { id: true, role: true } });
       for (const old of oldLeaders) {
         await lockedAccount(tx, old.id);

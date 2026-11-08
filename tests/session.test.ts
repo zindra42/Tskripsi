@@ -23,7 +23,8 @@ function sessionRecord(token: string, publicId: string, remember = false): Sessi
     pengguna: {
       id: 1n, nama: "Pengguna sintetis", email: null, role: "dosen", statusAkun: "aktif",
       catatanPenolakan: null, wajibGantiPassword: false, authVersion: 0, deletedAt: null,
-      dosen: { isKaprodi: true, isSekpro: false },
+      dosen: { isKaprodi: true, isSekpro: false, prodi: "Informatika" },
+      mahasiswa: null,
     },
   };
 }

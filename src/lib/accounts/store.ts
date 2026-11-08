@@ -90,11 +90,12 @@ export async function assertIdentities(tx: Tx, id: bigint | undefined, values: {
   if (values.nidn) ensure(!await tx.dosen.findFirst({ where: { nidn: values.nidn, ...(id ? { penggunaId: { not: id } } : {}) } }), "NIDN sudah digunakan. Hubungi pengelola untuk pemulihan akun.");
 }
 
-export async function assertSingleKaprodi(tx: Tx, except?: bigint) {
+export async function assertSingleKaprodi(tx: Tx, except?: bigint, prodi?: string | null) {
   ensure(!await tx.pengguna.findFirst({ where: {
     deletedAt: null, statusAkun: "aktif", ...(except ? { id: { not: except } } : {}),
+    ...(prodi ? { dosen: { prodi } } : {}),
     OR: [{ role: "kaprodi" }, { role: "dosen", dosen: { isKaprodi: true } }],
-  } }), "Sudah ada Kaprodi aktif. Gunakan penetapan peran untuk mengalihkan jabatan.");
+  } }), prodi ? `Sudah ada Kaprodi aktif untuk program studi ${prodi}. Gunakan penetapan peran untuk mengalihkan jabatan.` : "Sudah ada Kaprodi aktif. Gunakan penetapan peran untuk mengalihkan jabatan.");
 }
 
 export async function syncExpertise(tx: Tx, id: bigint, bidang: bigint[]) {

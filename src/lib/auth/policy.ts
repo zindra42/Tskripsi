@@ -14,7 +14,8 @@ export type AccountPolicy = {
   statusAkun: string;
   deletedAt: Date | null;
   wajibGantiPassword: boolean;
-  dosen: { isKaprodi: boolean; isSekpro: boolean } | null;
+  dosen: { isKaprodi: boolean; isSekpro: boolean; prodi?: string | null } | null;
+  mahasiswa?: { prodi?: string | null } | null;
 };
 
 export function availableRoles(user: AccountPolicy): Role[] {

@@ -98,11 +98,13 @@ model Mahasiswa {
   nim        String?   @unique @db.VarChar(50)
   nimArsip   String?   @map("nim_arsip") @db.VarChar(50)
   semester   Int       @db.SmallInt
+  prodi      String?   @db.VarChar(100)
   noHp       String?   @map("no_hp") @db.VarChar(255)
   createdAt  DateTime? @map("created_at") @db.Timestamp(0)
   updatedAt  DateTime? @map("updated_at") @db.Timestamp(0)
   pengguna   Pengguna  @relation(fields: [penggunaId], references: [id], onDelete: Cascade)
 
+  @@index([prodi])
   @@map("mahasiswa")
 }
 
@@ -112,6 +114,7 @@ model Dosen {
   nidnArsip      String?   @map("nidn_arsip") @db.VarChar(50)
   noHp           String?   @map("no_hp") @db.VarChar(20)
   kuotaBimbingan Int       @default(8) @map("kuota_bimbingan") @db.SmallInt
+  prodi          String?   @db.VarChar(100)
   isKaprodi      Boolean   @default(false) @map("is_kaprodi")
   isSekpro       Boolean   @default(false) @map("is_sekpro")
   createdAt      DateTime? @map("created_at") @db.Timestamp(0)
@@ -119,6 +122,7 @@ model Dosen {
   pengguna       Pengguna  @relation(fields: [penggunaId], references: [id], onDelete: Cascade)
   keahlian       DosenKeahlian[]
 
+  @@index([prodi])
   @@map("dosen")
 }
 

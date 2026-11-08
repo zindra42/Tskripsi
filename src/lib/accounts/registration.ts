@@ -24,7 +24,7 @@ export async function registerAccount(input: unknown, session?: AuthenticatedSes
     }
     if (lecturer) ensure(data.nidn && data.noHp, "NIDN dan nomor HP wajib diisi.");
     await assertIdentities(tx, undefined, { email: data.email, nim: data.role === "mahasiswa" ? data.nim : null, nidn: lecturer ? data.nidn : null });
-    if (data.role === "kaprodi") await assertSingleKaprodi(tx);
+    if (data.role === "kaprodi") await assertSingleKaprodi(tx, undefined, data.prodi);
     const now = new Date();
     const user = await tx.pengguna.create({ data: {
       nama: data.nama, email: data.email, password,
@@ -34,10 +34,11 @@ export async function registerAccount(input: unknown, session?: AuthenticatedSes
       createdAt: now, updatedAt: now,
     } });
     if (data.role === "mahasiswa") {
-      await tx.mahasiswa.create({ data: { penggunaId: user.id, nim: data.nim, semester: data.semester!, noHp: data.noHp, createdAt: now, updatedAt: now } });
+      await tx.mahasiswa.create({ data: { penggunaId: user.id, nim: data.nim, semester: data.semester!, prodi: data.prodi ?? "Informatika", noHp: data.noHp, createdAt: now, updatedAt: now } });
     } else if (lecturer) {
       await tx.dosen.create({ data: {
         penggunaId: user.id, nidn: data.nidn, noHp: data.noHp,
+        prodi: data.prodi ?? "Informatika",
         kuotaBimbingan: Number(settings.kuota_bimbingan_default ?? 10),
         isKaprodi: data.role === "kaprodi", isSekpro: data.role === "sekpro" || (!admin && data.isSekpro),
         createdAt: now, updatedAt: now,

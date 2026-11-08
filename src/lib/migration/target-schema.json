@@ -1,5 +1,5 @@
 {
-  "schemaSha256": "5fb874c80acdfaac8364499cf31a0f53a86772b1a73f7b398b789e53ce6ab027",
+  "schemaSha256": "1fe6bfaa04600794b6538dfceace96c4210f15a1a9951f997748ab6c7e831546",
   "tables": {
     "pengguna": {
       "columns": {

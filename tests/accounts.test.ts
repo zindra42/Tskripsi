@@ -20,8 +20,8 @@ function fixture(id: bigint, role: Account["role"] = "mahasiswa", flags = { isKa
     id, nama: `Pengguna ${id}`, email: `user${id}@example.invalid`, emailArsip: null,
     role, statusAkun: "aktif", catatanPenolakan: null, wajibGantiPassword: false,
     authVersion: 0, deletedAt: null, dibuatOlehSuperAdmin: false,
-    mahasiswa: role === "mahasiswa" ? { penggunaId: id, nim: `2200${id}`, nimArsip: null, semester: 9, noHp: null, createdAt: null, updatedAt: null } : null,
-    dosen: lecturer ? { penggunaId: id, nidn: `9911${id}`, nidnArsip: null, noHp: null,
+    mahasiswa: role === "mahasiswa" ? { penggunaId: id, nim: `2200${id}`, nimArsip: null, semester: 9, prodi: "Informatika", noHp: null, createdAt: null, updatedAt: null } : null,
+    dosen: lecturer ? { penggunaId: id, nidn: `9911${id}`, nidnArsip: null, noHp: null, prodi: "Informatika",
       kuotaBimbingan: 8, ...flags, keahlian: [], createdAt: null, updatedAt: null } : null,
   };
 }

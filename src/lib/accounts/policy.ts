@@ -15,10 +15,20 @@ export function canManage(user: AccountPolicy, activeRole: Role, permission: Acc
   return roles.some((role) => canAccessArea(user, activeRole, role));
 }
 
+export function isSameProdi(managerProdi?: string | null, targetProdi?: string | null): boolean {
+  if (!managerProdi || !targetProdi) return true;
+  return managerProdi.trim().toLowerCase() === targetProdi.trim().toLowerCase();
+}
+
 export function canDecideAccount(actor: AccountIdentity, target: AccountIdentity) {
-  return actor.id !== target.id && target.role !== "superadmin"
-    && !(hasAuthority(actor, "sekpro") && actor.role !== "superadmin"
-      && (hasAuthority(target, "kaprodi") || hasAuthority(target, "sekpro")));
+  if (actor.id === target.id || target.role === "superadmin") return false;
+  if (hasAuthority(actor, "sekpro") && actor.role !== "superadmin"
+      && (hasAuthority(target, "kaprodi") || hasAuthority(target, "sekpro"))) return false;
+  if (actor.role !== "superadmin" && actor.dosen?.prodi) {
+    const targetProdi = target.dosen?.prodi ?? target.mahasiswa?.prodi;
+    if (targetProdi && !isSameProdi(actor.dosen.prodi, targetProdi)) return false;
+  }
+  return true;
 }
 
 export function canDecideReset(actor: AccountIdentity, target: AccountIdentity) {

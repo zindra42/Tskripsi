@@ -24,8 +24,8 @@ const row = (value: unknown) => value as Row;
 function user(id: bigint, role: Account["role"]): Account {
   return { id, role, nama: `User ${id}`, email: `user${id}@example.invalid`, emailArsip: null, statusAkun: "aktif", deletedAt: null,
     authVersion: 0, wajibGantiPassword: false, catatanPenolakan: null, dibuatOlehSuperAdmin: false,
-    mahasiswa: role === "mahasiswa" ? { penggunaId: id, nim: `22001${id}`, nimArsip: null, semester: 9, noHp: null, createdAt: null, updatedAt: null } : null,
-    dosen: ["dosen", "kaprodi", "sekpro"].includes(role) ? { penggunaId: id, nidn: `12345${id}`, nidnArsip: null, noHp: null, kuotaBimbingan: 1,
+    mahasiswa: role === "mahasiswa" ? { penggunaId: id, nim: `22001${id}`, nimArsip: null, semester: 9, prodi: "Informatika", noHp: null, createdAt: null, updatedAt: null } : null,
+    dosen: ["dosen", "kaprodi", "sekpro"].includes(role) ? { penggunaId: id, nidn: `12345${id}`, nidnArsip: null, noHp: null, kuotaBimbingan: 1, prodi: "Informatika",
       isKaprodi: role === "kaprodi", isSekpro: role === "sekpro", keahlian: [], createdAt: null, updatedAt: null } : null };
 }
 
@@ -37,8 +37,9 @@ function session(actor: Account): AuthenticatedSession {
 // This adapter verifies service behavior and transaction boundaries. PostgreSQL locks and FK execution need integration verification.
 function synthetic(users: Account[]) {
   const tables: Record<string, Row[]> = {};
-  for (const name of ["pengguna", "authSession", "pengaturanSistem", "dosen", "bidangKeahlian", "pengajuanJudul", "bimbingan", "logbookBimbingan", "pengajuanPerubahanJudul", "jadwalBimbingan", "dokumenVerifikasi", "verifikasiPembayaran", "arsipJudulSkripsi", "notification", "academicReceipt", "logAktivitas", "logSuperAdmin"]) tables[name] = [];
+  for (const name of ["pengguna", "mahasiswa", "authSession", "pengaturanSistem", "dosen", "bidangKeahlian", "pengajuanJudul", "bimbingan", "logbookBimbingan", "pengajuanPerubahanJudul", "jadwalBimbingan", "dokumenVerifikasi", "verifikasiPembayaran", "arsipJudulSkripsi", "notification", "academicReceipt", "logAktivitas", "logSuperAdmin"]) tables[name] = [];
   tables.pengguna = users.map((item) => row(clone(item)));
+  tables.mahasiswa = users.filter((item) => item.mahasiswa).map((item) => row(clone(item.mahasiswa)));
   tables.authSession = users.map((item) => row(session(item)));
   tables.dosen = users.filter((item) => item.dosen).map((item) => row(clone(item.dosen)));
   tables.bidangKeahlian = [{ id: 1n, namaBidang: "Data" }, { id: 2n, namaBidang: "Jaringan" }];
@@ -48,7 +49,7 @@ function synthetic(users: Account[]) {
   const queries: string[] = [];
   function hydrate(name: string, item: Row): Row {
     const find = (table: string, id: unknown) => tables[table].find((candidate) => candidate.id === id);
-    if (name === "pengajuanJudul") return { ...item, mahasiswa: find("pengguna", item.idMahasiswa), bimbingan: tables.bimbingan.find((candidate) => candidate.idPengajuan === item.id) ?? null };
+    if (name === "pengajuanJudul") return { ...item, mahasiswa: hydrate("pengguna", find("pengguna", item.idMahasiswa)!), bimbingan: tables.bimbingan.find((candidate) => candidate.idPengajuan === item.id) ?? null };
     if (name === "bimbingan") return { ...item, pengajuan: hydrate("pengajuanJudul", find("pengajuanJudul", item.idPengajuan)!),
       pembimbing1: find("pengguna", item.idDosenPembimbing), pembimbing2: find("pengguna", item.idDosenPembimbing2),
       logbook: tables.logbookBimbingan.filter((candidate) => candidate.idBimbingan === item.id),
@@ -58,7 +59,8 @@ function synthetic(users: Account[]) {
     };
     if (name === "authSession") return { ...item, pengguna: find("pengguna", item.penggunaId) };
     if (name === "dosen") return { ...item, pengguna: find("pengguna", item.penggunaId) };
-    if (name === "pengguna") return { ...item, dosen: tables.dosen.find((candidate) => candidate.penggunaId === item.id) ?? item.dosen ?? null };
+    if (name === "mahasiswa") return { ...item, pengguna: find("pengguna", item.penggunaId) };
+    if (name === "pengguna") return { ...item, dosen: tables.dosen.find((candidate) => candidate.penggunaId === item.id) ?? item.dosen ?? null, mahasiswa: tables.mahasiswa.find((candidate) => candidate.penggunaId === item.id) ?? item.mahasiswa ?? null };
     return item;
   }
   function matches(item: Row, where: Row = {}): boolean {
@@ -108,6 +110,15 @@ function synthetic(users: Account[]) {
         const item = { id: ++sequence, ...defaults, ...data };
         tables[name].push(item);
         return clone(item);
+      },
+      createMany: async ({ data }: { data: Row[] }) => {
+        for (const entry of data) tables[name].push({ id: ++sequence, ...entry });
+        return { count: data.length };
+      },
+      deleteMany: async (args: Row = {}) => {
+        const found = find(args);
+        tables[name] = tables[name].filter((item) => !found.includes(item));
+        return { count: found.length };
       },
       update: async (args: Row) => { const item = find(args)[0]; assert.ok(item, `Missing ${name}`); return update(item, row(args.data)); },
       updateMany: async (args: Row) => { const found = find(args); found.forEach((item) => update(item, row(args.data))); return { count: found.length }; },

@@ -21,7 +21,12 @@ export async function academicViewer() {
 }
 
 export function scopedTitles(actor: Account, manager: boolean): Prisma.PengajuanJudulWhereInput {
-  if (manager) return {};
+  if (manager) {
+    if (actor.role !== "superadmin" && actor.dosen?.prodi) {
+      return { mahasiswa: { mahasiswa: { prodi: actor.dosen.prodi } } };
+    }
+    return {};
+  }
   const owner = { idMahasiswa: actor.id };
   return isLecturer(actor) ? { OR: [owner, { bimbingan: { OR: [{ idDosenPembimbing: actor.id }, { idDosenPembimbing2: actor.id }] } }] } : owner;
 }

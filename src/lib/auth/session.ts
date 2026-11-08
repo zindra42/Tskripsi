@@ -16,7 +16,8 @@ export const publicUserSelect = {
   wajibGantiPassword: true,
   authVersion: true,
   deletedAt: true,
-  dosen: { select: { isKaprodi: true, isSekpro: true } },
+  dosen: { select: { isKaprodi: true, isSekpro: true, prodi: true } },
+  mahasiswa: { select: { prodi: true } },
 } satisfies Prisma.PenggunaSelect;
 
 export type SessionUser = Prisma.PenggunaGetPayload<{ select: typeof publicUserSelect }>;

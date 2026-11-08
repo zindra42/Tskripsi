@@ -12,6 +12,8 @@ import { assignSupervisors, checkSimilarity, decideAdministration, removeAdminis
 import { acc, addLog, saveSchedule, transitionSchedule, updateLog } from "@/lib/academic/guidance";
 import { decideChange, submitChange } from "@/lib/academic/changes";
 import { matrixFields, reason } from "@/lib/academic/validation";
+import { importArchiveCsv } from "@/lib/academic/archive-csv";
+import { database } from "@/lib/db";
 
 export type SimilarityReport = Awaited<ReturnType<typeof checkSimilarity>>;
 export type AcademicFormState = { error?: string; success?: string; result?: SimilarityReport };
@@ -157,5 +159,33 @@ export async function academicAction(_state: AcademicFormState, form: FormData):
     if (error instanceof AccountError) return { error: error.message };
     if (error instanceof z.ZodError || error instanceof SyntaxError) return { error: "Periksa isian wajib, format, dan panjang data. Matriks harus berupa daftar JSON yang valid jika diisi." };
     return { error: "Layanan akademik belum tersedia. Muat ulang untuk memeriksa hasil permintaan atau hubungi pengelola." };
+  }
+}
+
+export async function importArchiveTitlesAction(
+  _prevState: unknown,
+  formData: FormData,
+): Promise<{ error?: string; success?: string; imported?: number; skipped?: number }> {
+  try {
+    if (!await hasTrustedOrigin()) throw new AccountError("Permintaan tidak sah.");
+    const session = await requireSession();
+    ensure(session.user.role === "superadmin", "Hanya Super Admin yang dapat mengimpor arsip judul.");
+    const file = formData.get("file");
+    ensure(file instanceof File && file.size > 0, "Pilih berkas CSV untuk diimpor.");
+    ensure((file as File).size <= 10 * 1024 * 1024, "Ukuran berkas CSV maksimal 10 MB.");
+    const mode = formData.get("mode") === "replace" ? "replace" : "append";
+    const text = await (file as File).text();
+    const result = await database().$transaction(async (tx) => {
+      return importArchiveCsv(tx, text, mode);
+    });
+    revalidatePath("/arsip-judul");
+    return {
+      success: `Berhasil mengimpor ${result.imported} judul (${result.skipped} dilewati).`,
+      imported: result.imported,
+      skipped: result.skipped,
+    };
+  } catch (error) {
+    if (error instanceof AccountError) return { error: error.message };
+    return { error: "Gagal mengimpor file CSV. Pastikan format file sesuai (judul,nama_penulis,tahun,nim,prodi)." };
   }
 }
