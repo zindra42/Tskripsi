@@ -9,7 +9,7 @@ import { announcementVisible } from "./policy";
 
 export { announcementVisible };
 
-const rolesSchema = z.array(z.enum(["mahasiswa", "dosen", "kaprodi", "sekpro", "admin_keuangan", "superadmin"])).min(1).max(6)
+const rolesSchema = z.array(z.enum(["mahasiswa", "dosen", "kaprodi", "sekpro", "admin_keuangan", "superadmin", "dekan"])).min(1).max(7)
   .refine((values) => new Set(values).size === values.length);
 const optionalDate = (input: unknown) => input === "" || input == null ? null : localDateTime.parse(input);
 

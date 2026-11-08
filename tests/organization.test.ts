@@ -75,11 +75,26 @@ test("master, penetapan Dekan dan pemetaan legacy dengan database sintetis", asy
     const data = { kode: "PA", nama: "Prodi Fakultas A", jenjang: "S1", fakultasId: "1", aktif: true };
     await service.saveProgram(live, undefined, data, reason);
     await assert.rejects(service.saveProgram(live, 2n, { ...data, fakultasId: "2" }, reason), /tidak berwenang/);
-    await assert.rejects(service.saveProgram(live, 1n, { ...data, fakultasId: "2" }, reason), /tidak dapat dipindahkan/);
+    await assert.rejects(service.saveProgram(live, 1n, { ...data, fakultasId: "2" }, reason), /tidak berwenang/);
+    await assert.rejects(service.saveProgram(sessions[0], 1n, { ...data, fakultasId: "2" }, reason), /tidak dapat dipindahkan/);
     await assert.rejects(service.saveFaculty(live, undefined, data, reason), /kewenangan/);
     await assert.rejects(service.assignDean(live, 1n, 3n, reason), /kewenangan/);
     await assert.rejects(service.linkProfile(live, 3n, "mahasiswa", 1n, reason), /kewenangan/);
     await assert.rejects(service.saveProgram(sessions[2], undefined, data, reason), /tidak berwenang/);
+  });
+  await t.test("Dekan menetapkan pimpinan fakultas sendiri dan mode sesi tersimpan tidak dapat dipalsukan", async () => {
+    const admin = fixture(1n, "superadmin"), dean = fixture(2n, "dosen"), lecturer = fixture(3n, "dosen"), foreign = fixture(4n, "dosen");
+    dean.role = "dekan"; dean.fakultasId = 1n; dean.fakultas = { id: 1n, nama: "Fakultas A", aktif: true };
+    foreign.dosen = { ...foreign.dosen!, ...affiliation(2n, 2n) };
+    const live = session(dean), memory = syntheticDatabase([admin, dean, lecturer, foreign], [session(admin), live]); globalDb.siasDatabase = memory.db;
+    await service.appointLeadership(live, 1n, "kaprodi", 3n, reason);
+    await service.appointLeadership(live, 1n, "sekpro", 3n, reason);
+    assert.equal(memory.tables.dosen.find((p) => p.penggunaId === 3n)!.isKaprodi, true);
+    assert.equal(memory.tables.dosen.find((p) => p.penggunaId === 3n)!.isSekpro, true);
+    await assert.rejects(service.appointLeadership(live, 2n, "kaprodi", 4n, reason), /tidak berwenang/);
+    await assert.rejects(service.appointLeadership(live, 1n, "kaprodi", 4n, reason), /Pejabat harus/);
+    memory.tables.authSession.find((s) => s.penggunaId === dean.id)!.activeRole = "dosen";
+    await assert.rejects(service.appointLeadership({ ...live, activeRole: "dekan" }, 1n, "kaprodi", 3n, reason), /tidak berwenang/);
   });
   await t.test("rotasi kedua jabatan hanya mencabut pejabat prodi tujuan, mempertahankan jabatan lain", async () => {
     for (const office of ["kaprodi", "sekpro"] as const) {
@@ -146,5 +161,17 @@ test("master, penetapan Dekan dan pemetaan legacy dengan database sintetis", asy
     assert.equal(memory.tables.dosen.filter((p) => p.isKaprodi).length, 1);
     assert.equal(memory.tables.dosen.find((p) => p.penggunaId === 3n)!.isKaprodi, true);
     assert.equal(memory.tables.logAktivitas.filter((a) => a.aksi === "penetapan_kaprodi").length, 2);
+  });
+  await t.test("perubahan fakultas dan rotasi Dekan mencabut afiliasi/sesi lama tanpa menyentuh fakultas lain", async () => {
+    const admin = fixture(1n, "superadmin"), dean = fixture(2n, "dosen"), next = fixture(3n, "dosen"), foreign = fixture(4n, "dosen");
+    foreign.dosen = { ...foreign.dosen!, ...affiliation(2n, 2n) };
+    const adminSession = session(admin), memory = syntheticDatabase([admin, dean, next, foreign], [adminSession, session(dean), session(next), session(foreign)]); globalDb.siasDatabase = memory.db;
+    await service.assignDean(adminSession, 1n, dean.id, reason);
+    await service.assignDean(adminSession, 1n, next.id, reason);
+    assert.equal(memory.tables.pengguna.find((u) => u.id === dean.id)!.role, "dosen");
+    assert.equal(memory.tables.pengguna.find((u) => u.id === dean.id)!.fakultasId, null);
+    await service.saveFaculty(adminSession, 1n, { kode: "FA", nama: "Fakultas Diperbarui", aktif: true }, reason);
+    assert.deepEqual(memory.tables.authSession.map((s) => s.penggunaId), [1n, 4n]);
+    await assert.rejects(service.saveFaculty(adminSession, 1n, { kode: "FA", nama: "Fakultas Diperbarui", aktif: false }, reason), /Nonaktifkan prodi/);
   });
 });

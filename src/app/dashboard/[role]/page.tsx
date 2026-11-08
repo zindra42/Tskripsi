@@ -7,12 +7,14 @@ import { requireArea } from "@/lib/auth/session";
 import { getCachedDashboardIndicators } from "@/lib/support/dashboard";
 import { DashboardOverview } from "@/components/dashboard-overview";
 import { DashboardOverviewSkeleton } from "@/components/skeleton";
+import { FacultyMonitoring } from "@/components/faculty-monitoring";
 
 export const dynamic = "force-dynamic";
-export default async function RoleDashboard({ params }: { params: Promise<{ role: string }> }) {
+export default async function RoleDashboard({ params, searchParams }: { params: Promise<{ role: string }>; searchParams: Promise<{ fakultasId?: string; programStudiId?: string }> }) {
   const { role } = await params;
   if (!isRole(role)) notFound();
   const session = await requireArea(role);
+  if (role === "dekan") return <WorkspaceShell session={session}><h1 className="mb-4 text-3xl font-bold">Dashboard Dekan</h1><p className="mb-6 text-slate-600">Monitoring akademik dan tata kelola fakultas Anda. <Link href="/organisasi" className="underline">Kelola prodi dan pimpinan</Link></p><Suspense fallback={<DashboardOverviewSkeleton />}><FacultyMonitoring session={session} filters={await searchParams} /></Suspense></WorkspaceShell>;
   const indicators = await getCachedDashboardIndicators(session);
   return <WorkspaceShell session={session}>
     <p className="mb-2 text-sm text-slate-500">Area {roleLabels[role]}</p>

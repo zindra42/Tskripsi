@@ -1,0 +1,16 @@
+name: Penjagaan tamu tata kelola dan monitoring Dekan
+url: ${BASE_URL}/login
+env:
+  BASE_URL: http://127.0.0.1:3115
+---
+- launchApp
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/dashboard/dekan
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/organisasi
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/organisasi/afiliasi
+- assertVisible: Selamat datang kembali
+- openLink: ${BASE_URL}/monitoring?fakultasId=2&programStudiId=2
+- assertVisible: Selamat datang kembali
+- takeScreenshot: sias-dekan-guest-guards

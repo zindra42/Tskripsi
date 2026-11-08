@@ -125,7 +125,7 @@ export async function systemOverview(session: AuthenticatedSession) {
   const [settings, logs, storage, users] = await Promise.all([
     db.pengaturanSistem.findUnique({ where: { kunci: "scheduler_last_heartbeat" } }),
     db.logAktivitas.findMany({ orderBy: { waktu: "desc" }, take: 10 }), privateStorageUsage(),
-    Promise.all((["mahasiswa", "dosen", "kaprodi", "sekpro", "admin_keuangan", "superadmin"] as const).map(async (role) => {
+    Promise.all((["mahasiswa", "dosen", "kaprodi", "sekpro", "admin_keuangan", "superadmin", "dekan"] as const).map(async (role) => {
       const filter: Prisma.PenggunaWhereInput = role === "kaprodi" ? { OR: [{ role }, { role: "dosen", dosen: { isKaprodi: true } }] }
         : role === "sekpro" ? { OR: [{ role }, { role: "dosen", dosen: { isSekpro: true } }] }
         : role === "dosen" ? { role, dosen: { isKaprodi: false, isSekpro: false } } : { role };

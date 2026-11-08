@@ -6,7 +6,7 @@
 ![Prisma](https://img.shields.io/badge/Prisma-7.10.1-2D3748?style=flat-square&logo=prisma)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-336791?style=flat-square&logo=postgresql)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.3.5-38B2AC?style=flat-square&logo=tailwind-css)
-![Automated Tests](https://img.shields.io/badge/Tests-155%20passed-success?style=flat-square)
+![Automated Tests](https://img.shields.io/badge/Tests-npm%20test-success?style=flat-square)
 
 Platform web modern terpadu untuk digitalisasi, pemantauan, dan percepatan seluruh siklus administrasi skripsi dan tugas akhir mahasiswa di lingkungan perguruan tinggi. Dibangun menggunakan arsitektur **Next.js App Router**, **TypeScript** (strict mode), **Prisma ORM**, dan **PostgreSQL**.
 
@@ -20,6 +20,7 @@ Pengelolaan administrasi tugas akhir dan skripsi sering menghadapi tantangan ber
 - **Mahasiswa** dapat mengajukan judul dengan pengecekan kemiripan otomatis, mencatat sesi konsultasi secara interaktif, mendaftar seminar proposal hingga sidang skripsi.
 - **Dosen Pembimbing & Penguji** dapat memvalidasi logbook, memberikan persetujuan (ACC), mengonfirmasi ketersediaan jadwal ujian, dan mengisi rubrik penilaian terbobot secara real-time.
 - **Pimpinan Program Studi (Kaprodi & Sekpro)** dapat meninjau judul, menetapkan pembimbing berdasarkan keahlian dan kuota, menyusun jadwal bebas bentrok, serta mengesahkan berita acara kelulusan.
+- **Dekan** mengelola prodi, menetapkan/merotasi Kaprodi dan Sekpro, serta memantau akademik dalam fakultasnya melalui `/organisasi` dan `/dashboard/dekan`.
 - **Admin Keuangan & Staf Administrasi** memverifikasi bukti pembayaran dan berkas prasyarat akademik.
 - **Publik / Pihak Ketiga** dapat memverifikasi keabsahan dokumen resmi (SK, Berita Acara, Lembar Pengesahan) melalui pemindaian QR code tanpa perlu login.
 
@@ -28,9 +29,11 @@ Pengelolaan administrasi tugas akhir dan skripsi sering menghadapi tantangan ber
 ## 🚀 Fitur Utama
 
 ### 1. 👥 Manajemen Akun & Otorisasi Multi-Peran
-- **Akses Berbasis Peran**: Mahasiswa, Dosen, Kaprodi, Sekretaris Prodi, Admin Keuangan, dan Superadmin.
+- **Akses Berbasis Peran**: Mahasiswa, Dosen, Kaprodi, Sekretaris Prodi, Dekan, Admin Keuangan, dan Superadmin.
 - **Pergantian Peran Dinamis (Role Switching)**: Pimpinan program studi dapat berpindah antara mode manajerial dan tugas pengajaran/pembimbingan dengan mulus.
 - **Alur Persetujuan Registrasi & Reset Mandiri**: Registrasi akun bertingkat serta permohonan reset password berbasis persetujuan administrator dengan token sekali pakai yang aman.
+
+Master fakultas/prodi memakai ID eksplisit. Superadmin menyiapkan fakultas, menempatkan Dekan dan menautkan profil lama melalui `/organisasi/afiliasi`; label prodi historis tidak memberi hak akses. Registrasi dan perubahan afiliasi memilih prodi aktif. Dekan tidak memperoleh hak approval akademik, penilaian, keuangan, reset akun atau pengaturan sistem. Petunjuk transisi dan batas verifikasi tersedia di [panduan organisasi](docs/organization.md).
 
 ### 2. 💡 Pengajuan Judul & Deteksi Kemiripan (NLP)
 - **Analisis Kemiripan Judul Otomatis**: Memanfaatkan algoritma token similarity (Jaccard) terintegrasi dengan stemmer bahasa Indonesia (Sastrawi) untuk mendeteksi potensi duplikasi terhadap korpus judul skripsi terdahulu.

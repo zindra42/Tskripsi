@@ -7,6 +7,7 @@ import { canManage } from "@/lib/accounts/policy";
 import { scoreRole } from "@/lib/sidang/policy";
 
 export async function dashboardIndicators(session: AuthenticatedSession) {
+  if (session.user.role === "dekan") return [];
   const db = database(), id = session.user.id;
   const manager = canManage(session.user, session.activeRole);
   const student = session.user.role === "mahasiswa";

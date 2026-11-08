@@ -65,9 +65,9 @@ export async function rotateLeadership(tx: Tx, actor: Account, programId: bigint
 export async function appointLeadership(session: AuthenticatedSession, programId: bigint, office: "kaprodi" | "sekpro", targetId: bigint | null, reason: string) {
   reasonSchema.parse(reason);
   return accountTransaction(async (tx) => {
-    const program = await tx.programStudi.findUnique({ where: { id: programId } });
-    ensure(program, "Program studi tidak ditemukan.");
-    const actor = await governor(tx, session, program.fakultasId);
+    const actor = await governor(tx, session);
+    const program = await tx.programStudi.findFirst({ where: { id: programId, ...(actor.role === "superadmin" ? {} : { fakultasId: actor.fakultasId! }) } });
+    ensure(program, "Program studi tidak ditemukan atau Anda tidak berwenang.");
     await rotateLeadership(tx, actor, program.id, office, targetId, reason);
   });
 }
@@ -95,9 +95,9 @@ export async function saveFaculty(session: AuthenticatedSession, id: bigint | un
 export async function saveProgram(session: AuthenticatedSession, id: bigint | undefined, input: unknown, reason: string) {
   const data = programSchema.parse(input); reasonSchema.parse(reason);
   return accountTransaction(async (tx) => {
-    const before = id ? await tx.programStudi.findUnique({ where: { id } }) : null;
-    ensure(!id || before, "Program studi tidak ditemukan.");
-    const actor = await governor(tx, session, before?.fakultasId ?? data.fakultasId);
+    const actor = await governor(tx, session, data.fakultasId);
+    const before = id ? await tx.programStudi.findFirst({ where: { id, ...(actor.role === "superadmin" ? {} : { fakultasId: actor.fakultasId! }) } }) : null;
+    ensure(!id || before, "Program studi tidak ditemukan atau Anda tidak berwenang.");
     ensure(!before || before.fakultasId === data.fakultasId, "Fakultas prodi tidak dapat dipindahkan. Tautkan ulang profil secara eksplisit.");
     const faculty = await tx.fakultas.findUnique({ where: { id: data.fakultasId } });
     ensure(faculty?.aktif, "Fakultas tidak aktif atau tidak ditemukan.");
@@ -164,13 +164,14 @@ export async function linkProfile(session: AuthenticatedSession, id: bigint, kin
 export async function organizationData(session: AuthenticatedSession) {
   return accountTransaction(async (tx) => {
     const actor = await checkedActor(tx, session);
+    const live = await tx.authSession.findUniqueOrThrow({ where: { tokenHash: session.tokenHash } });
     ensure(["superadmin", "dekan"].includes(actor.role), "Area tata kelola tidak tersedia.");
     const admin = actor.role === "superadmin";
-    if (!canGovern(actor, session.activeRole)) return { actor, faculties: [], programs: [], candidates: [], profiles: [] };
+    if (!canGovern(actor, live.activeRole)) return { actor, faculties: [], programs: [], candidates: [] };
     const faculties = await tx.fakultas.findMany({ where: admin ? {} : { id: actor.fakultasId! }, orderBy: { nama: "asc" }, include: { pengguna: { where: { role: "dekan", deletedAt: null }, select: { id: true, nama: true } } } });
     const programs = await tx.programStudi.findMany({ where: admin ? {} : { fakultasId: actor.fakultasId! }, include: { fakultas: true, dosen: { where: { OR: [{ isKaprodi: true }, { isSekpro: true }, { pengguna: { role: { in: ["kaprodi", "sekpro"] } } }] }, select: { penggunaId: true, isKaprodi: true, isSekpro: true, pengguna: { select: { nama: true, role: true } } } } }, orderBy: { nama: "asc" } });
     const candidates = await tx.pengguna.findMany({ where: { statusAkun: "aktif", deletedAt: null, role: { in: admin ? ["dosen", "kaprodi", "sekpro", "dekan"] : ["dosen", "kaprodi", "sekpro"] }, dosen: admin ? { isNot: null } : { programStudi: { fakultasId: actor.fakultasId!, aktif: true } } }, select: { id: true, nama: true, role: true, dosen: { select: { programStudiId: true } } }, orderBy: { nama: "asc" } });
-    return { actor, faculties, programs, candidates, profiles: [] };
+    return { actor, faculties, programs, candidates };
   });
 }
 

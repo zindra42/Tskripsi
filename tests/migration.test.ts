@@ -39,6 +39,19 @@ test("terminal catalog covers all 78 up() bodies, actual drops and both deferred
   const crypto = await import("node:crypto");
   assert.equal(targetCatalog.schemaSha256, crypto.createHash("sha256").update(text.replace(/\r\n/g, "\n")).digest("hex"));
 });
+
+test("master baru tidak menebak afiliasi atau mengubah graf impor historis", () => {
+  const snapshot = syntheticSnapshot(), plan = createPlan(snapshot, tableOrder());
+  assert.ok(targetCatalog.tables.fakultas && targetCatalog.tables.program_studi);
+  assert.ok(!plan.stages.some((s) => s.name.startsWith("insert:fakultas:") || s.name.startsWith("insert:program_studi:")));
+  for (const table of ["pengguna", "mahasiswa", "dosen"]) {
+    assert.ok(!foreignKeys(table).some((fk) => ["fakultas", "program_studi"].includes(fk.table)));
+    for (const op of plan.stages.flatMap((s) => s.operations).filter((op) => op.table === table)) {
+      assert.ok(!Object.hasOwn(op.mapped, "program_studi_id"));
+      assert.ok(!Object.hasOwn(op.mapped, "fakultas_id"));
+    }
+  }
+});
 test("synthetic rehearsal preserves bigint, raw identity/hash, decimals, decisions and full source state", async () => {
   const f = await fixture();
   try {

@@ -34,7 +34,7 @@ export function session(user: Account, activeRole = availableRoles(user)[0]): Au
 export function syntheticDatabase(users: Account[], sessions: AuthenticatedSession[]) {
   const tables: Record<string, Row[]> = Object.fromEntries([
     "fakultas", "programStudi", "pengguna", "mahasiswa", "dosen", "dosenKeahlian", "bidangKeahlian", "adminKeuangan", "authSession",
-    "passwordResetRequest", "biodataChangeRequest", "keahlianChangeRequest", "logAktivitas", "logSuperAdmin", "pengaturanSistem",
+    "passwordResetRequest", "biodataChangeRequest", "keahlianChangeRequest", "logAktivitas", "logSuperAdmin", "pengaturanSistem", "bimbingan",
   ].map((name) => [name, []]));
   for (const user of users) {
     tables.pengguna.push(asRow(clone(user)));

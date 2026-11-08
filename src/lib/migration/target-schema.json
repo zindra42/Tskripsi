@@ -1,5 +1,5 @@
 {
-  "schemaSha256": "1fe6bfaa04600794b6538dfceace96c4210f15a1a9951f997748ab6c7e831546",
+  "schemaSha256": "4f55175c4f60a4573cafde025c6ec04155ec70c61062d4dee68fdc39f086d7e8",
   "tables": {
     "pengguna": {
       "columns": {
@@ -67,8 +67,17 @@
             "kaprodi",
             "sekpro",
             "admin_keuangan",
-            "superadmin"
+            "superadmin",
+            "dekan"
           ]
+        },
+        "fakultas_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
         },
         "status_akun": {
           "type": "StatusAkun",
@@ -168,7 +177,146 @@
           "email"
         ]
       ],
+      "foreignKeys": [
+        {
+          "column": "fakultas_id",
+          "table": "fakultas",
+          "target": "id"
+        }
+      ]
+    },
+    "fakultas": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "kode": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Citext",
+            null
+          ],
+          "enum": null
+        },
+        "nama": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        },
+        "aktif": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "true",
+          "native": [],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "kode"
+        ]
+      ],
       "foreignKeys": []
+    },
+    "program_studi": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "fakultas_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "kode": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Citext",
+            null
+          ],
+          "enum": null
+        },
+        "nama": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Citext",
+            null
+          ],
+          "enum": null
+        },
+        "jenjang": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "aktif": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "true",
+          "native": [],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "fakultas_id",
+          "kode"
+        ],
+        [
+          "fakultas_id",
+          "nama",
+          "jenjang"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "fakultas_id",
+          "table": "fakultas",
+          "target": "id"
+        }
+      ]
     },
     "mahasiswa": {
       "columns": {
@@ -211,6 +359,25 @@
             "SmallInt",
             null
           ],
+          "enum": null
+        },
+        "prodi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        },
+        "program_studi_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
           "enum": null
         },
         "no_hp": {
@@ -256,6 +423,11 @@
         ]
       ],
       "foreignKeys": [
+        {
+          "column": "program_studi_id",
+          "table": "program_studi",
+          "target": "id"
+        },
         {
           "column": "pengguna_id",
           "table": "pengguna",
@@ -317,6 +489,25 @@
           ],
           "enum": null
         },
+        "prodi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        },
+        "program_studi_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
         "is_kaprodi": {
           "type": "Boolean",
           "nullable": false,
@@ -365,6 +556,11 @@
         ]
       ],
       "foreignKeys": [
+        {
+          "column": "program_studi_id",
+          "table": "program_studi",
+          "target": "id"
+        },
         {
           "column": "pengguna_id",
           "table": "pengguna",
@@ -469,7 +665,8 @@
             "kaprodi",
             "sekpro",
             "admin_keuangan",
-            "superadmin"
+            "superadmin",
+            "dekan"
           ]
         },
         "remember": {
@@ -1067,6 +1264,30 @@
           "native": [],
           "enum": null
         },
+        "program_studi_lama_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "program_studi_baru_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "ubah_program_studi": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
         "rincian_data": {
           "type": "String",
           "nullable": true,
@@ -1292,6 +1513,30 @@
           "enum": null
         },
         "ubah_no_hp": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "program_studi_lama_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "program_studi_baru_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "ubah_program_studi": {
           "type": "Boolean",
           "nullable": false,
           "generated": false,

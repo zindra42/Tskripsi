@@ -23,7 +23,10 @@ export function sourceColumnType(column: SourceColumn): string {
 }
 // Source actor FKs omitted by the application datamodel remain validation dependencies.
 export function foreignKeys(table: string): ForeignKey[] {
-  const keys = [...(sourceCatalog.tables[table]?.foreignKeys ?? []), ...(targetCatalog.tables[table]?.foreignKeys ?? [])];
+  // New master affiliations default to NULL on legacy imports; they have no source
+  // column and must not add a fabricated dependency on non-legacy master tables.
+  const keys = [...(sourceCatalog.tables[table]?.foreignKeys ?? []), ...(targetCatalog.tables[table]?.foreignKeys ?? [])
+    .filter((key) => Object.hasOwn(sourceCatalog.tables[table]?.columns ?? {}, key.column))];
   if (["penugasan_penguji", "checklist_dokumen"].includes(table)) keys.push({ column: "id_sidang_daftar", table: "pendaftaran_sidang", target: "id" });
   if (table === "notifications") keys.push({ column: "notifiable_id", table: "pengguna", target: "id" });
   return [...new Map(keys.map((k) => [canonical([k.column, k.table, k.target]), k])).values()];
