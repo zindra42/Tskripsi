@@ -38,6 +38,8 @@ export function syntheticSnapshot(): Snapshot {
   const user = rows.pengguna[0]; user.password = SYNTHETIC_PASSWORD; user.email = "synthetic@example.test";
   user.created_at = "2026-10-20 08:01:02";
   rows.mahasiswa[0].nim = "211000001"; rows.dosen[0].nidn = "0000000001";
+  rows.keahlian_change_requests[0].keahlian_lama = { $json: "[]" };
+  rows.keahlian_change_requests[0].keahlian_diajukan = { $json: "[]" };
   for (const table of ["mahasiswa", "dosen", "admin_keuangan"]) rows[table][0].pengguna_id = user.id;
   rows.dosen_keahlian[0].dosen_id = user.id;
   rows.notifications[0].notifiable_type = "App\\Models\\Pengguna";

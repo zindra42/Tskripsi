@@ -39,8 +39,9 @@ export function tableOrder(): string[] {
   }
   return [...done, ...archiveOnly];
 }
-export function assertBigint(value: Cell) {
-  if (typeof value !== "string" || !/^(0|[1-9]\d*)$/.test(value) || BigInt(value) > 9223372036854775807n) throw new Error("bigint-string-required");
+export function assertBigint(value: Cell, signed = false) {
+  if (typeof value !== "string" || !(signed ? /^-?(0|[1-9]\d*)$/ : /^(0|[1-9]\d*)$/).test(value)
+    || BigInt(value) > 9223372036854775807n || BigInt(value) < (signed ? -9223372036854775808n : 0n)) throw new Error("bigint-string-required");
 }
 export function timestamp(value: string, kind: "date" | "timestamp", timezone: string): string {
   if (kind === "date") {

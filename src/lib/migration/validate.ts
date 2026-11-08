@@ -48,7 +48,7 @@ export function validateSnapshot(input: unknown): Validation {
         const value = row[column];
         try {
           if (value === null) { if (!spec.nullable) throw new Error("source-nullability"); continue; }
-          if (["id", "foreignId", "unsignedBigInteger", "bigInteger"].includes(spec.type)) assertBigint(value);
+          if (["id", "foreignId", "unsignedBigInteger", "bigInteger"].includes(spec.type)) assertBigint(value, spec.type === "bigInteger");
           if (spec.type === "json") { if (!value || typeof value !== "object") throw new Error("json-tag-required"); parseJson(value.$json); }
           if (spec.type === "enum") {
             const values = [...(spec.definition ?? "").matchAll(/'([^']*)'/g)].slice(1).map((m) => m[1]);
@@ -75,11 +75,46 @@ export function validateSnapshot(input: unknown): Validation {
       }
     }
   }
+  const referenceIndexes = new Map<string, Set<unknown>>();
+  const references = (table: string, column: string) => {
+    const key = `${table}.${column}`;
+    if (!referenceIndexes.has(key)) referenceIndexes.set(key, new Set(snapshot.tables[table]?.rows.map((r) => r[column]) ?? []));
+    return referenceIndexes.get(key)!;
+  };
   for (const [table, data] of Object.entries(snapshot.tables)) if (sourceCatalog.tables[table] && !archiveOnly.has(table)) for (const row of data.rows) {
     for (const fk of foreignKeys(table)) {
       const value = row[fk.column];
       if (value === null || value === undefined) continue;
-      if (!snapshot.tables[fk.table]?.rows.some((r) => r[fk.target] === value)) issues.push({ code: "orphan-physical-or-logical-fk", table, pk: primaryKey(row, sourceCatalog.tables[table].primaryKey), column: fk.column, stage: table });
+      if (!references(fk.table, fk.target).has(value)) issues.push({ code: "orphan-physical-or-logical-fk", table, pk: primaryKey(row, sourceCatalog.tables[table].primaryKey), column: fk.column, stage: table });
+    }
+    // JSON relationships are not physical FKs. Inspect original number lexemes without
+    // rewriting the source JSON or rounding historical numeric IDs through Number.
+    for (const column of table === "revisi_dokumen" ? ["persetujuan"] : table === "pengajuan_judul" ? ["preferensi_dosen_ids"]
+      : table === "keahlian_change_requests" ? ["keahlian_lama", "keahlian_diajukan"] : table === "bimbingan" ? ["pembatalan_p1", "pembatalan_p2"] : []) {
+      const raw = row[column];
+      if (!raw || typeof raw !== "object") continue;
+      try {
+        const data: unknown = parseJson(raw.$json, (_key, value, context?: { source?: string }) => {
+          if (typeof value !== "number") return value;
+          if (!context?.source) throw new Error("lossless-json-parser-required");
+          return context.source;
+        });
+        if (data === null) continue;
+        const target = column.startsWith("keahlian_") ? "bidang_keahlian" : "pengguna";
+        let ids: unknown[];
+        if (["preferensi_dosen_ids", "keahlian_lama", "keahlian_diajukan"].includes(column)) {
+          if (!Array.isArray(data)) throw new Error("invalid-logical-json-shape");
+          ids = data;
+        } else {
+          if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("invalid-logical-json-shape");
+          ids = column === "persetujuan" ? Object.values(data).map((v: unknown) => v && typeof v === "object" && "dosen_id" in v ? v.dosen_id : null)
+            : Object.entries(data).filter(([key]) => ["id_dosen_lama", "dibatalkan_oleh_id"].includes(key)).map(([, v]) => v);
+        }
+        for (const value of ids.filter((v) => v !== null)) {
+          assertBigint(value as Row[string]);
+          if (!references(target, "id").has(value)) issues.push({ code: "orphan-logical-json-fk", table, pk: primaryKey(row, sourceCatalog.tables[table].primaryKey), column, stage: table });
+        }
+      } catch { issues.push({ code: "logical-json-unverified", table, pk: primaryKey(row, sourceCatalog.tables[table].primaryKey), column }); }
     }
     if (table === "pendaftaran_sempro" && row.dispensasi_id) {
       const d = snapshot.tables.dispensasi_kehadiran_sempro?.rows.find((r) => r.id === row.dispensasi_id);

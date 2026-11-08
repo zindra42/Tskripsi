@@ -3,6 +3,8 @@ import test from "node:test";
 import { mkdtemp, mkdir, writeFile, rm, symlink, readFile } from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { canonical, canonicalJson, primaryKey } from "../src/lib/migration/contract";
 import { sourceCatalog, targetCatalog, tableOrder, deferred, foreignKeys, mapCell, timestamp } from "../src/lib/migration/catalog";
 import { validateSnapshot, dryRun } from "../src/lib/migration/validate";
@@ -11,6 +13,8 @@ import { createPlan, importSnapshot } from "../src/lib/migration/importer";
 import { postgresImportStore, insertStatement, projection, capturePostgres, type Query } from "../src/lib/migration/postgres";
 import { assembleSnapshot } from "../src/lib/migration/export";
 import { legacyRequest } from "../src/lib/migration/urls";
+import { getOrCreateNomorDasar, getOrCreateNomorDokumen } from "../src/lib/sempro/documents";
+import type { Tx } from "../src/lib/accounts/store";
 import { reconcileImported } from "../src/lib/migration/reconcile";
 import { syntheticSnapshot, reseal, SYNTHETIC_PASSWORD } from "./fixtures/migration";
 import { syntheticImportStore } from "./helpers/migration-store";
@@ -231,6 +235,50 @@ test("target capture reads lossless sequence state without nextval or DB writes"
   assert.equal(captured.nextSequences.pengguna, "9007199254741999");
   assert.deepEqual(captured.tables.auth_sessions, []);
   assert.ok(sqlCalls.every((sql) => sql.startsWith("SELECT ") && !sql.includes("nextval")));
+});
+
+test("logical JSON references keep numeric bigint lexemes lossless and reject orphan approvers", async () => {
+  const f = await fixture();
+  try {
+    const snapshot = structuredClone(f.snapshot);
+    snapshot.tables.revisi_dokumen.rows[0].persetujuan = { $json: '{"pembimbing_1":{"dosen_id":9007199254740993,"status":"menunggu"}}' };
+    snapshot.tables.pengajuan_judul.rows[0].preferensi_dosen_ids = { $json: '[9007199254740993]' };
+    snapshot.tables.cache.rows[0].expiration = "-1";
+    assert.ok(validateSnapshot(reseal(snapshot)).valid);
+    snapshot.tables.revisi_dokumen.rows[0].persetujuan = { $json: '{"pembimbing_1":{"dosen_id":9007199254740992}}' };
+    assert.ok(validateSnapshot(reseal(snapshot)).issues.some((i) => i.code === "orphan-logical-json-fk" && i.table === "revisi_dokumen"));
+  } finally { await f.dispose(); }
+});
+
+test("dry-run CLI emits only a private metadata report and refuses to overwrite it", async () => {
+  const f = await fixture();
+  try {
+    const input = path.join(path.dirname(f.roots.private), "synthetic.snapshot.json"), report = path.join(path.dirname(f.roots.private), "report.json");
+    const content = JSON.stringify(f.snapshot); await writeFile(input, content);
+    const args = ["--conditions=react-server", "--import", "tsx", "scripts/migration-dry-run.ts", input, f.roots.private, f.roots.public, report];
+    const result = await promisify(execFile)(process.execPath, args);
+    assert.deepEqual(JSON.parse(result.stdout), { valid: true, issueCount: 0, reportWritten: true });
+    const written = await readFile(report, "utf8"), metadata = JSON.parse(written);
+    assert.ok(!metadata.snapshot && !metadata.tables); assert.equal(metadata.liveImportExecuted, false); assert.equal(metadata.cutoverVerified, false);
+    assert.ok(!written.includes(SYNTHETIC_PASSWORD) && !written.includes("MiXeD"));
+    assert.equal(await readFile(input, "utf8"), content);
+    await assert.rejects(promisify(execFile)(process.execPath, args));
+    assert.equal(await readFile(report, "utf8"), written);
+  } finally { await f.dispose(); }
+});
+
+test("new letter allocations follow sparse imported maxima and WITA annual/category boundaries", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: new Date("2026-12-31T16:30:00Z") });
+  let baseData: Record<string, unknown> = {}, categoryData: Record<string, unknown> = {};
+  const tx = { nomorSuratDasar: { findUnique: async () => null, findFirst: async ({ where }: { where: { tahun: number } }) => {
+    assert.equal(where.tahun, 2027); return { nomorUrut: 47 };
+  }, create: async ({ data }: { data: Record<string, unknown> }) => { baseData = data; return { id: 55n, ...data }; },
+  findUniqueOrThrow: async () => ({ id: 55n, nomorUrut: 48 }) },
+  nomorSuratKategori: { findUnique: async () => null, create: async ({ data }: { data: Record<string, unknown> }) => { categoryData = data; return data; } } } as unknown as Tx;
+  await getOrCreateNomorDasar(tx, 11n); await getOrCreateNomorDokumen(tx, 55n, "b", new Date());
+  assert.equal(baseData.nomorUrut, 48); assert.equal(baseData.tahun, 2027);
+  assert.equal(categoryData.bulanRomawi, "I"); assert.equal(categoryData.tahun, 2027);
+  assert.match(String(categoryData.nomorLengkap), /^048-b\/.+\/I\/2027$/);
 });
 test("reconciliation catches token, lifecycle, numeric, JSON, archive, count and sequence drift", async () => {
   const f = await fixture();

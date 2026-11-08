@@ -13,7 +13,7 @@
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "migration:audit-source": "node scripts/audit-legacy-schema.mjs",
-    "migration:dry-run": "tsx scripts/migration-dry-run.ts",
+    "migration:dry-run": "tsx --conditions=react-server scripts/migration-dry-run.ts",
     "migration:rehearsal": "tsx --conditions=react-server scripts/migration-rehearsal.ts"
   },
   "dependencies": {

@@ -1,5 +1,7 @@
 # SIAS TypeScript
 
+Tooling migrasi TASK-007 tersedia pada [panduan migrasi dan gerbang rilis](docs/legacy-migration.md). `npm run migration:rehearsal` memakai fixture sintetis tanpa database. Import riil, migration keenam dan cutover tetap menunggu proposal/persetujuan pemilik; keberhasilan dry-run tidak berarti cutover telah terverifikasi.
+
 Tahap sidang dan modul pendukung kini tersedia pada root repository ini. Rujukan implementasi, klasifikasi pembayaran aktif/historis, bukti FK logis, keputusan legacy dan batas verifikasi ada di [paritas TASK-006](docs/task006-parity.md); kontrak data/berkas untuk fase migrasi ada di [kontrak impor sidang](docs/sidang-import-contract.md); implementasi migrasi data, katalog skema dan rekonsiliasi rilis ada di [dokumentasi TASK-007](docs/task007-migration.md). Catatan tahap sebelumnya di bawah tetap merupakan histori pengerjaan.
 
 Verifikasi TASK-007 pada 8 November 2026: `npm test` lulus **151/151** (136 modul domain + 15 suite migrasi/rekonsiliasi), `npm run lint`, `npm run typecheck`, `npm run prisma:validate`, `npm run build` dan `git diff --check` lulus bersih. Rehearsal sintetis (`npm run migration:rehearsal`) memvalidasi 78 up() migration sumber, pemutusan siklus topologis (sempro-dispensasi dan self-reference dokumen), preservasi bigint lossless, audit FK logis/fisik, proteksi storage/symlink, rollback transaksi chunk, pemulihan checkpoint, dan penataan sequence ID.

@@ -14,7 +14,7 @@ export async function getOrCreateNomorDasar(tx: Tx, pengajuanId: bigint) {
     where: { idPengajuan: pengajuanId },
   });
   if (!nomorDasar) {
-    const currentYear = new Date().getFullYear();
+    const currentYear = Number(new Intl.DateTimeFormat("en", { timeZone: "Asia/Makassar", year: "numeric" }).format(new Date()));
     // Imported allocations may be sparse. Counting rows would reuse an existing number.
     const lastAllocation = await tx.nomorSuratDasar.findFirst({
       where: { tahun: currentYear }, orderBy: { nomorUrut: "desc" },
@@ -53,7 +53,7 @@ export async function getOrCreateNomorDokumen(
       where: { id: nomorDasarId },
     });
     const romawi = getBulanRomawi(tanggalTerbit);
-    const tahun = tanggalTerbit.getFullYear();
+    const tahun = Number(new Intl.DateTimeFormat("en", { timeZone: "Asia/Makassar", year: "numeric" }).format(tanggalTerbit));
     const nomorLengkap = generateNomorSurat(nomorDasar.nomorUrut, kategori, romawi, tahun);
 
     kategoriRecord = await tx.nomorSuratKategori.create({

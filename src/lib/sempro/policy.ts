@@ -103,7 +103,7 @@ export const ROMAN_MONTHS: Record<number, string> = {
 };
 
 export function getBulanRomawi(date: Date): string {
-  const month = date.getMonth() + 1;
+  const month = Number(new Intl.DateTimeFormat("en", { timeZone: "Asia/Makassar", month: "numeric" }).format(date));
   return ROMAN_MONTHS[month] ?? "I";
 }
 
