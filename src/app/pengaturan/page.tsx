@@ -1,7 +1,6 @@
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { ActionForm, Field, ReasonField } from "@/components/account-forms";
-import { database } from "@/lib/db";
-import { settingsValues } from "@/lib/accounts/store";
+import { getCachedSystemSettings } from "@/lib/support/master-data";
 import { expertiseOptions, requireAccountPermission } from "@/lib/accounts/views";
 import { settingDefinitions } from "@/lib/accounts/validation";
 import { academicPeriod } from "@/lib/accounts/policy";
@@ -9,7 +8,7 @@ import { academicPeriod } from "@/lib/accounts/policy";
 export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const session = await requireAccountPermission("settings");
-  const values = await settingsValues(database());
+  const values = await getCachedSystemSettings();
   const period = academicPeriod(values);
   return <WorkspaceShell session={session}><h1 className="mb-6 text-3xl font-bold">Pengaturan sistem</h1>
     <section className="panel"><p className="mb-6">Periode aktif {period.jenis} {period.tahunMulai}/{period.tahunMulai + 1}</p>

@@ -1,9 +1,9 @@
 import "server-only";
 import { notFound } from "next/navigation";
-import { database } from "@/lib/db";
 import { requireSession } from "@/lib/auth/session";
 import { canManage, type AccountPermission } from "./policy";
 import type { Account } from "./store";
+import { getCachedMasterFields } from "@/lib/support/master-data";
 
 export async function requireAccountPermission(permission: AccountPermission = "manage") {
   const session = await requireSession();
@@ -12,7 +12,7 @@ export async function requireAccountPermission(permission: AccountPermission = "
 }
 
 export async function expertiseOptions() {
-  const fields = await database().bidangKeahlian.findMany({ orderBy: { namaBidang: "asc" } });
+  const fields = await getCachedMasterFields();
   return fields.map((field) => ({ id: field.id.toString(), namaBidang: field.namaBidang }));
 }
 

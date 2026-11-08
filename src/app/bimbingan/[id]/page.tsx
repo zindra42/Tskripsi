@@ -4,10 +4,11 @@ import { WorkspaceShell } from "@/components/workspace-shell";
 import { AcademicForm, TitleEditor } from "@/components/academic-forms";
 import { ResearchMatrix } from "@/components/research-matrix";
 import { database } from "@/lib/db";
-import { settingsValues } from "@/lib/accounts/store";
+import { getCachedSystemSettings } from "@/lib/support/master-data";
 import { pageNumber } from "@/lib/accounts/views";
 import { academicViewer, initialMatrix, routeId, timestamp, titleOptions } from "@/lib/academic/views";
 import { canReadTitle, currentTitle, isAssigned } from "@/lib/academic/policy";
+import { getJenisDokumenLabel } from "@/lib/documents/labels";
 
 export const dynamic = "force-dynamic";
 export default async function GuidanceDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ page?: string }> }) {
@@ -25,7 +26,7 @@ export default async function GuidanceDetail({ params, searchParams }: { params:
   const owner = actor.role === "mahasiswa" && b.pengajuan.idMahasiswa === actor.id;
   const supervisor = Boolean(actor.dosen && ["dosen", "kaprodi", "sekpro"].includes(actor.role) && isAssigned(actor.id, b));
   const writable = currentTitle(b.pengajuan) && b.pengajuan.status === "disetujui";
-  const [settings, options, count] = await Promise.all([settingsValues(database()), owner ? titleOptions() : null,
+  const [settings, options, count] = await Promise.all([getCachedSystemSettings(), owner ? titleOptions() : null,
     database().logbookBimbingan.count({ where: { idBimbingan: id, fase: "sempro", statusSelesai: true, isDibatalkan: false } }),
   ]);
   const supervisors = [[b.idDosenPembimbing, b.pembimbing1?.nama], [b.idDosenPembimbing2, b.pembimbing2?.nama]] as const;
@@ -49,7 +50,7 @@ export default async function GuidanceDetail({ params, searchParams }: { params:
       {writable && !row.isDibatalkan && row.siklusKe === b.siklusKe && <div className="mt-4 grid gap-4 sm:grid-cols-2">{owner && <AcademicForm command="note-log" id={String(row.id)} label="Simpan catatan mahasiswa"><label>Catatan saya<textarea name="catatan" required minLength={3} maxLength={1000} defaultValue={row.catatanMahasiswa ?? ""} /></label></AcademicForm>}
         {(supervisor || kaprodi) && <AcademicForm command="cancel-log" id={String(row.id)} label="Batalkan sesi">{reasonInput}</AcademicForm>}</div>}
     </article>)}{!b.logbook.length && <p>Belum ada sesi bimbingan.</p>}</div></section>
-    <section className="panel mt-5"><h2 className="mb-4 text-xl font-semibold">ACC bimbingan</h2><div className="space-y-3">{b.documents.slice(0, 20).map((doc) => <p key={String(doc.id)}>{doc.namaPenandatangan} · {doc.jenisDokumen} {doc.jenisDokumen === "acc_sidang" && doc.status === "sah" && <a className="underline" href={`/api/sidang/dokumen/${doc.token}`}>Unduh ACC Sidang</a>} · {doc.status} · Versi {doc.versi} · {timestamp(doc.diterbitkanAt)}</p>)}{!b.documents.length && <p>ACC belum diterbitkan.</p>}</div>
+    <section className="panel mt-5"><h2 className="mb-4 text-xl font-semibold">ACC bimbingan</h2><div className="space-y-3">{b.documents.slice(0, 20).map((doc) => <p key={String(doc.id)}>{doc.namaPenandatangan} · {getJenisDokumenLabel(doc.jenisDokumen)} {doc.jenisDokumen === "acc_sidang" && doc.status === "sah" && <a className="underline" href={`/api/sidang/dokumen/${doc.token}`}>Unduh ACC Sidang</a>} · {doc.status} · Versi {doc.versi} · {timestamp(doc.diterbitkanAt)}</p>)}{!b.documents.length && <p>ACC belum diterbitkan.</p>}</div>
       {writable && supervisor && <div className="mt-5 grid gap-5 sm:grid-cols-2"><AcademicForm command="issue-acc" id={String(id)} label="Terbitkan ACC">{phaseInput}</AcademicForm><AcademicForm command="revoke-acc" id={String(id)} label="Cabut ACC">{phaseInput}{reasonInput}</AcademicForm></div>}
     </section>
     {writable && supervisor && <details className="panel mt-5"><summary className="font-semibold">Buat jadwal bimbingan</summary><div className="mt-4"><AcademicForm command="schedule" id={String(id)} label="Kirim jadwal">

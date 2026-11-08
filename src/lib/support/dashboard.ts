@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { Prisma } from "@/generated/prisma/client";
 import { database } from "@/lib/db";
 import { type AuthenticatedSession } from "@/lib/auth/session";
@@ -59,3 +60,10 @@ export async function dashboardIndicators(session: AuthenticatedSession) {
     ...(["admin_keuangan", "superadmin"].includes(session.user.role) ? [{ label: "Administrasi awal menunggu verifikasi", count: administration, href: "/administrasi" }] : []),
   ];
 }
+
+/**
+ * Memoized dashboard indicators query per server request.
+ */
+export const getCachedDashboardIndicators = cache(async (session: AuthenticatedSession) => {
+  return dashboardIndicators(session);
+});

@@ -566,6 +566,20 @@ test("layanan sidang, dokumen dan komunikasi dijalankan dengan transaksi sinteti
     for (const [key, value] of Object.entries({ command: "request-change", key: randomUUID(), ...values(), jenis: "ubah_jadwal", reason: "Jadwal perlu usulan alternatif", tanggal: "2026-11-10", mulai: "09:00", selesai: "10:30", ruang: "Ruang B", tanggal2: "2026-11-11", mulai2: "09:00", selesai2: "10:30", ruang2: "Ruang B", tanggal3: "2026-11-12", mulai3: "10:00", selesai3: "11:30", ruang3: "Ruang C" })) alternatives.set(key, value);
     assert.equal((await sidangAction({}, alternatives)).success, "Perubahan tersimpan.");
     assert.equal((fixture.tables.permohonanSidang[0].slotUsulan as unknown[]).length, 3);
+    const { announcementAction } = await import("../src/app/actions/announcements");
+    const { supportAction } = await import("../src/app/actions/support");
+    token = "6".repeat(64); fixture.tables.authSession.find((s) => s.penggunaId === 6n)!.tokenHash = tokenHash(token);
+    const annForm = new FormData();
+    for (const [k, v] of Object.entries({ command: "announcement-save", key: randomUUID(), judul: "Pengumuman Server Action", isi: "Isi pengumuman", kategori: "umum", status: "terbit", kirimNotifikasi: "false" })) annForm.set(k, v);
+    annForm.append("targetPeran", "mahasiswa");
+    const annRes = await announcementAction({}, annForm);
+    assert.equal(annRes.success, "Pengumuman berhasil disimpan.");
+    assert.ok(annRes.id);
+    token = "8".repeat(64); fixture.tables.authSession.find((s) => s.penggunaId === 8n)!.tokenHash = tokenHash(token);
+    const supForm = new FormData();
+    for (const [k, v] of Object.entries({ command: "correction", key: randomUUID(), correction: "correct-supervisor", bimbinganId: "30", slot: "1", dosenId: "7", reason: "Koreksi pembimbing utama" })) supForm.set(k, v);
+    const supRes = await supportAction({}, supForm);
+    assert.equal(supRes.success, "Koreksi penugasan tersimpan.");
   });
   await t.test("PDF naskah panjang menambah halaman dengan xref dan isi akhir tetap tersimpan", () => {
     const marker = "AKHIR_CATATAN_REVISI";

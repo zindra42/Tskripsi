@@ -50,6 +50,7 @@ export async function saveAnnouncement(context: Context, input: Input, uploads: 
     : await context.tx.pengumuman.create({ data: { ...data, dibuatOleh: context.actor.id, createdAt: new Date() } });
   await audit(context.tx, context.actor.id, "pengumuman_disimpan", `pengumuman:${row.id}`, { before: previous, after: row });
   if (input.kirimNotifikasi !== "false") await fanout(context, row.id, input.kirimUlang === "true");
+  return { id: String(row.id), message: "Pengumuman berhasil disimpan." };
 }
 export async function archiveAnnouncement(context: Context, input: Input) {
   requireManager(context);

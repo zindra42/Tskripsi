@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth/session";
+import { createSecureFileResponse } from "@/lib/academic/files";
 
 const templates: Record<string, string> = {
   acc: "Template_Lembar_ACC_Sidang.pdf", "lembar-acc": "Template_Lembar_ACC_Sidang.pdf",
@@ -15,8 +16,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ kind
   if (!file) return new NextResponse("Template tidak ditemukan.", { status: 404 });
   try {
     const bytes = await readFile(path.join(process.cwd(), "assets", "sidang", file));
-    return new NextResponse(new Uint8Array(bytes), { headers: { "Content-Type": "application/pdf",
-      "Content-Disposition": `${new URL(request.url).searchParams.has("download") ? "attachment" : "inline"}; filename="${file}"`,
-      "Cache-Control": "private, no-store" } });
+    return createSecureFileResponse(bytes, file, {
+      disposition: new URL(request.url).searchParams.has("download") ? "attachment" : "inline",
+      allowedExtensions: ["pdf"],
+    });
   } catch { return new NextResponse("Template tidak tersedia.", { status: 404 }); }
 }

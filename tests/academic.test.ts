@@ -58,6 +58,7 @@ function synthetic(users: Account[]) {
     };
     if (name === "authSession") return { ...item, pengguna: find("pengguna", item.penggunaId) };
     if (name === "dosen") return { ...item, pengguna: find("pengguna", item.penggunaId) };
+    if (name === "pengguna") return { ...item, dosen: tables.dosen.find((candidate) => candidate.penggunaId === item.id) ?? item.dosen ?? null };
     return item;
   }
   function matches(item: Row, where: Row = {}): boolean {
@@ -71,6 +72,7 @@ function synthetic(users: Account[]) {
         const condition = row(expected);
         if ("in" in condition) return (condition.in as unknown[]).includes(actual);
         if ("not" in condition) return actual !== condition.not;
+        if ("isNot" in condition) return actual !== condition.isNot;
         if ("contains" in condition) return String(actual ?? "").includes(String(condition.contains));
         if ("gt" in condition) return (actual as Date) > (condition.gt as Date);
         if ("lt" in condition) return Number(actual) < Number(condition.lt);
@@ -235,6 +237,81 @@ test("alur akademik menjalankan layanan dan entry point aktual dengan database s
     process.env.SIAS_STORAGE_ROOT = path.join(process.cwd(), "public", "uploads");
     try { await assert.rejects(() => readStoredFile("proposal/legacy.pdf"), /direktori statis/); }
     finally { process.env.SIAS_STORAGE_ROOT = root; }
+  });
+  await t.test("penanganan streaming berkas aman createSecureFileResponse dan deteksi tipe", async () => {
+    const { detectFileType, createSecureFileResponse } = await import("../src/lib/academic/files");
+    const pdfBytes = Buffer.from("%PDF-1.4\ncontent");
+    const pngBytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3]);
+    const jpgBytes = Buffer.from([255, 216, 255, 224, 0, 16]);
+    const unknownBytes = Buffer.from("plain text content");
+
+    assert.deepEqual(detectFileType(pdfBytes), { extension: "pdf", mime: "application/pdf" });
+    assert.deepEqual(detectFileType(pngBytes), { extension: "png", mime: "image/png" });
+    assert.deepEqual(detectFileType(jpgBytes), { extension: "jpg", mime: "image/jpeg" });
+    assert.equal(detectFileType(unknownBytes), null);
+
+    const resPdf = createSecureFileResponse(pdfBytes, "dokumen", { disposition: "inline" });
+    assert.equal(resPdf.status, 200);
+    assert.equal(resPdf.headers.get("Content-Type"), "application/pdf");
+    assert.equal(resPdf.headers.get("Content-Disposition"), 'inline; filename="dokumen.pdf"');
+    assert.equal(resPdf.headers.get("Cache-Control"), "private, no-store");
+    assert.equal(resPdf.headers.get("X-Content-Type-Options"), "nosniff");
+
+    const resPng = createSecureFileResponse(pngBytes, 'foto"test".png', { disposition: "attachment" });
+    assert.equal(resPng.status, 200);
+    assert.equal(resPng.headers.get("Content-Type"), "image/png");
+    assert.equal(resPng.headers.get("Content-Disposition"), 'attachment; filename="foto_test_.png"');
+    assert.equal(resPng.headers.get("X-Content-Type-Options"), "nosniff");
+
+    const resErr = createSecureFileResponse(unknownBytes, "file.bin");
+    assert.equal(resErr.status, 415);
+    assert.equal(await resErr.text(), "Format berkas tidak didukung.");
+
+    const resNotPdf = createSecureFileResponse(pngBytes, "draft.pdf", {
+      allowedExtensions: ["pdf"],
+      unsupportedMessage: "Format naskah tidak didukung.",
+    });
+    assert.equal(resNotPdf.status, 415);
+    assert.equal(await resNotPdf.text(), "Format naskah tidak didukung.");
+
+    const resFallback = createSecureFileResponse(unknownBytes, "lampiran", {
+      disposition: "attachment",
+      fallbackExtension: "bin",
+      contentType: "application/octet-stream",
+    });
+    assert.equal(resFallback.status, 200);
+    assert.equal(resFallback.headers.get("Content-Type"), "application/octet-stream");
+    assert.equal(resFallback.headers.get("Content-Disposition"), 'attachment; filename="lampiran.bin"');
+  });
+  await t.test("memoization query master data dan parameter sistem getCachedSystemSettings getCachedActiveLecturers", async () => {
+    reset();
+    const { getCachedSystemSettings, getCachedActiveLecturers, getCachedLecturerOptions, getCachedMasterFields } = await import("../src/lib/support/master-data");
+    const { titleOptions } = await import("../src/lib/academic/views");
+
+    const settings = await getCachedSystemSettings();
+    assert.equal(typeof settings, "object");
+    assert.equal(settings.periode_pengajuan_judul_mulai, "2000-01-01");
+    assert.equal(settings.minimal_sesi_bimbingan_acc_sempro, "2");
+
+    const activeLecturers = await getCachedActiveLecturers();
+    assert.ok(Array.isArray(activeLecturers));
+    assert.ok(activeLecturers.length > 0);
+    assert.ok(activeLecturers.every((l) => l.dosen !== null));
+
+    const options = await getCachedLecturerOptions();
+    assert.ok(Array.isArray(options));
+    assert.equal(options.length, activeLecturers.length);
+    assert.ok(options[0].id && options[0].nama);
+
+    const fields = await getCachedMasterFields();
+    assert.ok(Array.isArray(fields));
+    assert.ok(fields.length >= 2);
+    assert.ok(fields.some((f) => f.namaBidang === "Data"));
+
+    const titleOpts = await titleOptions();
+    assert.ok(Array.isArray(titleOpts.fields));
+    assert.ok(Array.isArray(titleOpts.lecturers));
+    assert.ok(titleOpts.fields.length >= 2);
   });
   await t.test("administrasi sampai ACC, audit dan notifikasi berada dalam transaksi", async () => {
     await establish(true);
@@ -535,6 +612,9 @@ test("alur akademik menjalankan layanan dan entry point aktual dengan database s
       assert.ok((await academicAction({}, form)).success);
       assert.equal(fixture.tables.logbookBimbingan.length, 1);
       assert.equal(fixture.tables.logbookBimbingan[0].statusSelesai, true);
+      assert.ok(revalidate.mock.calls.some((c) => c.arguments[0] === "/bimbingan"));
+      assert.ok(!revalidate.mock.calls.some((c) => c.arguments[0] === "/administrasi"));
+      assert.ok(!revalidate.mock.calls.some((c) => c.arguments[0] === "/notifikasi"));
       assert.ok((await academicAction({}, form)).success);
       assert.equal(fixture.tables.logbookBimbingan.length, 1);
     } finally {

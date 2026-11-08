@@ -6,7 +6,7 @@ import { ResearchMatrix } from "@/components/research-matrix";
 import { database } from "@/lib/db";
 import { academicViewer, recommendations, routeId, storedIds, timestamp } from "@/lib/academic/views";
 import { canReadTitle } from "@/lib/academic/policy";
-import { settingsValues } from "@/lib/accounts/store";
+import { getCachedSystemSettings } from "@/lib/support/master-data";
 import { similarityWarning } from "@/lib/academic/similarity";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export default async function TitlePage({ params }: { params: Promise<{ id: stri
   const suggestions = manager && row.status === "disetujui" ? await recommendations(row, row.bimbingan?.id) : [];
   const current = !row.isDiarsipkan && row.statusDraft === "diajukan";
   const pref = storedIds(row.preferensiDosenIds);
-  const warning = similarityWarning(row.skorKemiripan, await settingsValues(database()));
+  const warning = similarityWarning(row.skorKemiripan, await getCachedSystemSettings());
   return <WorkspaceShell session={session}><Link href="/judul" className="underline">Kembali ke daftar judul</Link><article className="panel mt-5 space-y-4">
     <h1 className="text-2xl font-bold">{row.judul}</h1><p>{row.mahasiswa.nama} · {row.status} · {row.statusDraft} {row.isDiarsipkan && "· Diarsipkan"}</p>
     <p>{row.periodeAkademikSaatPengajuan} · Semester {row.semesterSaatPengajuan} · Siklus {row.siklusKe} · Pengajuan ke-{row.counterPengajuan}</p>

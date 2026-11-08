@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { database } from "@/lib/db";
 import { requireSession } from "@/lib/auth/session";
@@ -9,6 +10,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { recommendationScore } from "./similarity";
 import { supervisorLoad } from "./store";
 import { isLecturer } from "./policy";
+import { getCachedMasterFields } from "@/lib/support/master-data";
 
 export async function academicViewer() {
   const session = await requireSession();
@@ -24,16 +26,16 @@ export function scopedTitles(actor: Account, manager: boolean): Prisma.Pengajuan
   return isLecturer(actor) ? { OR: [owner, { bimbingan: { OR: [{ idDosenPembimbing: actor.id }, { idDosenPembimbing2: actor.id }] } }] } : owner;
 }
 
-export async function titleOptions() {
+export const titleOptions = cache(async () => {
   const [fields, lecturers] = await Promise.all([
-    database().bidangKeahlian.findMany({ orderBy: { namaBidang: "asc" } }),
+    getCachedMasterFields(),
     database().dosen.findMany({ where: { pengguna: { deletedAt: null, statusAkun: "aktif", role: { in: ["dosen", "kaprodi", "sekpro"] } },
       OR: [{ nidn: null }, { NOT: { nidn: { contains: "_DEL_" } } }],
     }, include: { pengguna: { select: { nama: true } }, keahlian: { include: { bidang: true } } }, orderBy: { penggunaId: "asc" } }),
   ]);
   return { fields: fields.map((field) => ({ id: field.id.toString(), namaBidang: field.namaBidang })),
     lecturers: lecturers.map((lecturer) => ({ id: lecturer.penggunaId.toString(), nama: lecturer.pengguna.nama })), rawLecturers: lecturers };
-}
+});
 
 export async function recommendations(title: { judul: string; bidangKeahlianId: bigint | null; bidangKeahlian2Id: bigint | null; matriksPenelitian: unknown }, except?: bigint) {
   const options = await titleOptions();

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth/session";
 import { accountTransaction, checkedActor } from "@/lib/accounts/store";
-import { readStoredFile } from "@/lib/academic/files";
+import { createSecureFileResponse, readStoredFile } from "@/lib/academic/files";
 import { sidangRecord, canRead } from "@/lib/sidang/store";
 import { canManage } from "@/lib/accounts/policy";
 
@@ -34,11 +34,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ kin
   if (!path) return new NextResponse("Berkas tidak tersedia untuk Anda.", { status: 404 });
   try {
     const bytes = await readStoredFile(path);
-    const pdf = bytes.subarray(0, 5).toString() === "%PDF-";
-    const png = bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
-    const jpeg = bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
-    if (!pdf && !png && !jpeg) return new NextResponse("Format berkas historis tidak didukung.", { status: 415 });
-    return new NextResponse(new Uint8Array(bytes), { headers: { "Content-Type": pdf ? "application/pdf" : png ? "image/png" : "image/jpeg",
-      "Content-Disposition": `inline; filename="${kind}_${id}.${pdf ? "pdf" : png ? "png" : "jpg"}"`, "Cache-Control": "private, no-store" } });
+    return createSecureFileResponse(bytes, `${kind}_${id}`, {
+      disposition: "inline",
+      unsupportedMessage: "Format berkas historis tidak didukung.",
+    });
   } catch { return new NextResponse("Berkas tidak ditemukan.", { status: 404 }); }
 }

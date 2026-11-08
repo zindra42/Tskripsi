@@ -10,6 +10,8 @@ import { COMPONENT_NAMES, EXAMINER_WEIGHTS, SUPERVISOR_WEIGHTS, scoreRole, revis
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { recommendSlots } from "@/lib/sidang/scheduling";
 import { SidangForm } from "@/components/sidang-form";
+import { getJenisDokumenLabel } from "@/lib/documents/labels";
+import { getCachedLecturerOptions } from "@/lib/support/master-data";
 
 export const dynamic = "force-dynamic";
 function Note({ name = "reason", title = "Alasan", required = true }: { name?: string; title?: string; required?: boolean }) {
@@ -34,7 +36,7 @@ export default async function SidangDetail({ params, searchParams }: { params: P
   try { if (j) board = snapshotBoard(j); } catch { /* Historical schedules without snapshots remain visible for reconciliation. */ }
   const mySlot = Object.keys(board).find((role) => board[role] === String(actor.id));
   const peran = scoreRole(board, actor.id);
-  const lecturers = manager ? await db.pengguna.findMany({ where: { role: { in: ["dosen", "kaprodi", "sekpro"] }, statusAkun: "aktif", deletedAt: null, dosen: { isNot: null } }, select: { id: true, nama: true }, orderBy: { nama: "asc" } }) : [];
+  const lecturers = manager ? await getCachedLecturerOptions() : [];
   const values = { id: String(row.id), ...(j ? { jadwalId: String(j.id), versi: String(j.versi) } : {}) };
   const query = await searchParams;
   let suggestions: Awaited<ReturnType<typeof recommendSlots>> = [];
@@ -85,6 +87,6 @@ export default async function SidangDetail({ params, searchParams }: { params: P
         const own = Object.values(approvals).some((a) => String(a.dosen_id) === String(actor.id) && a.status === "menunggu");
         return <article key={String(r.id)} className="rounded border border-slate-200 p-4"><h3 className="font-semibold">Revisi versi {r.versi} · {r.status}</h3><p>{timestamp(r.createdAt)} · {r.catatanMahasiswa}</p><a className="my-3 block underline" href={`/api/sidang/file/revisi/${r.id}`}>Buka naskah revisi versi {r.versi}</a><ul className="mb-3 text-sm">{Object.entries(approvals).map(([slot, a]) => <li key={slot}>{slot}: {a.status}</li>)}</ul>{own && current && r.status === "menunggu_persetujuan" && <SidangForm command="review-revision" values={{ revisiId: String(r.id) }} label="Simpan tinjauan revisi"><label>Hasil tinjauan<select name="status"><option value="disetujui">Setujui</option><option value="ditolak">Perlu perbaikan</option></select></label><Note title="Alasan jika perlu perbaikan" required={false} /><Note name="catatan" title="Catatan persetujuan" required={false} /></SidangForm>}</article>;
       })}</section>}
-    {j && <section className="panel mb-6"><h2 className="mb-3 text-xl font-semibold">Dokumen PDF dan QR</h2><p className="mb-3 text-sm">Rekap nilai untuk pengelola. Berita acara mahasiswa tersedia setelah revisi selesai.</p><ul className="space-y-3">{j.documents.filter((doc) => doc.status === "sah" && (doc.jenisDokumen !== "rekap_nilai_sidang" || manager) && (!owner || doc.jenisDokumen !== "berita_acara_sidang" || ba && revisionComplete(ba))).map((doc) => <li key={String(doc.id)}><a className="underline" href={`/api/sidang/dokumen/${doc.token}`}>{doc.jenisDokumen.replaceAll("_", " ")} · versi {doc.versi}</a></li>)}</ul></section>}
+    {j && <section className="panel mb-6"><h2 className="mb-3 text-xl font-semibold">Dokumen PDF dan QR</h2><p className="mb-3 text-sm">Rekap nilai untuk pengelola. Berita acara mahasiswa tersedia setelah revisi selesai.</p><ul className="space-y-3">{j.documents.filter((doc) => doc.status === "sah" && (doc.jenisDokumen !== "rekap_nilai_sidang" || manager) && (!owner || doc.jenisDokumen !== "berita_acara_sidang" || ba && revisionComplete(ba))).map((doc) => <li key={String(doc.id)}><a className="underline" href={`/api/sidang/dokumen/${doc.token}`}>{getJenisDokumenLabel(doc.jenisDokumen)} · versi {doc.versi}</a></li>)}</ul></section>}
   </WorkspaceShell>;
 }

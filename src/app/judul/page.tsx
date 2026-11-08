@@ -4,7 +4,7 @@ import { AcademicForm, TitleEditor } from "@/components/academic-forms";
 import { database } from "@/lib/db";
 import { academicViewer, initialMatrix, scopedTitles, storedIds, timestamp, titleOptions } from "@/lib/academic/views";
 import { pageNumber } from "@/lib/accounts/views";
-import { settingsValues } from "@/lib/accounts/store";
+import { getCachedSystemSettings } from "@/lib/support/master-data";
 
 export const dynamic = "force-dynamic";
 export default async function TitlesPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
@@ -17,7 +17,7 @@ export default async function TitlesPage({ searchParams }: { searchParams: Promi
   }, include: { mahasiswa: { select: { nama: true } } }, orderBy: { id: "desc" }, take: 21, skip: (page - 1) * 20 });
   const options = actor.role === "mahasiswa" ? await titleOptions() : null;
   const draft = actor.role === "mahasiswa" ? await database().pengajuanJudul.findFirst({ where: { idMahasiswa: actor.id, deletedAt: null, isDiarsipkan: false, OR: [{ statusDraft: "draft" }, { status: "direvisi" }] }, orderBy: { id: "desc" } }) : null;
-  const settings = await settingsValues(database());
+  const settings = await getCachedSystemSettings();
   return <WorkspaceShell session={session}><div className="mb-5 flex flex-wrap items-center justify-between gap-4"><h1 className="text-3xl font-bold">Pengajuan judul</h1><Link className="underline" href="/arsip-judul">Arsip judul terdahulu</Link></div>
     <p className="mb-5 text-slate-600">Periode pengajuan {settings.periode_pengajuan_judul_mulai || "2026-08-29"} hingga {settings.periode_pengajuan_judul_selesai || "2026-10-31"}. Ambang peringatan kemiripan {settings.threshold_peringatan_plagiasi || "35"}%.</p>
     {options && <details className="panel mb-6" open={rows.length === 0}><summary className="cursor-pointer text-lg font-semibold">Draft dan pengajuan judul mahasiswa</summary><div className="mt-5"><TitleEditor fields={options.fields} lecturers={options.lecturers} preferences={storedIds(draft?.preferensiDosenIds)} initial={{ judul: draft?.judul ?? "", ...initialMatrix(draft?.matriksPenelitian) }} /></div></details>}

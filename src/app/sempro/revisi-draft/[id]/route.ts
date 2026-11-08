@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth/session";
 import { accountTransaction, checkedActor } from "@/lib/accounts/store";
 import { canManage } from "@/lib/accounts/policy";
-import { readStoredFile } from "@/lib/academic/files";
+import { createSecureFileResponse, readStoredFile } from "@/lib/academic/files";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession(), { id } = await params;
@@ -22,7 +22,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!file) return new NextResponse("Naskah tidak tersedia untuk Anda.", { status: 404 });
   try {
     const bytes = await readStoredFile(file);
-    if (bytes.subarray(0, 5).toString() !== "%PDF-") return new NextResponse("Format naskah tidak didukung.", { status: 415 });
-    return new NextResponse(new Uint8Array(bytes), { headers: { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="revisi_sempro_${id}.pdf"`, "Cache-Control": "private, no-store" } });
+    return createSecureFileResponse(bytes, `revisi_sempro_${id}.pdf`, {
+      disposition: "inline",
+      allowedExtensions: ["pdf"],
+      unsupportedMessage: "Format naskah tidak didukung.",
+    });
   } catch { return new NextResponse("Berkas tidak ditemukan.", { status: 404 }); }
 }

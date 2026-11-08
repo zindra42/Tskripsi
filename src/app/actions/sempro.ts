@@ -38,6 +38,50 @@ import {
 
 export type SemproFormState = { error?: string; success?: string; result?: unknown };
 
+function getSemproTargetedPaths(command: string): string[] {
+  switch (command) {
+    case "init-sempro":
+    case "upload-checklist":
+    case "centang-checklist":
+    case "submit-sempro":
+      return ["/sempro/pendaftaran", "/sempro/status", "/dashboard"];
+    case "verifikasi-checklist":
+      return ["/sempro/verifikasi", "/sempro/status", "/dashboard"];
+    case "tetapkan-penguji":
+    case "atur-jadwal":
+    case "tandai-tidak-terlaksana":
+      return ["/sempro/jadwal", "/sempro/status", "/dashboard"];
+    case "konfirmasi-jadwal":
+      return ["/sempro/konfirmasi-jadwal", "/sempro/jadwal", "/dashboard"];
+    case "catat-kehadiran":
+    case "tambah-kehadiran-manual":
+    case "tolak-kehadiran":
+    case "kunci-kehadiran":
+    case "ajukan-dispensasi":
+    case "putuskan-dispensasi":
+      return ["/sempro/kehadiran", "/sempro/status", "/dashboard"];
+    case "submit-nilai-penguji":
+    case "submit-nilai-pembimbing":
+    case "simpan-keputusan-penguji1":
+    case "tetapkan-hasil":
+      return ["/sempro/hasil", "/sempro/status", "/dashboard"];
+    case "unggah-revisi":
+    case "putuskan-revisi":
+      return ["/sempro/hasil", "/sempro/status", "/sempro/revisi", "/dashboard"];
+    default:
+      return [
+        "/sempro/pendaftaran",
+        "/sempro/status",
+        "/sempro/verifikasi",
+        "/sempro/jadwal",
+        "/sempro/konfirmasi-jadwal",
+        "/sempro/kehadiran",
+        "/sempro/hasil",
+        "/dashboard",
+      ];
+  }
+}
+
 export async function semproAction(
   _state: SemproFormState,
   form: FormData,
@@ -57,7 +101,16 @@ export async function semproAction(
       }
     }
 
-    const uploadFile = await validateUpload(form.get("file"), command === "upload-checklist" && form.get("nomorItem") === "0");
+    const requiresUpload =
+      command === "upload-checklist" ||
+      command === "catat-kehadiran" ||
+      command === "unggah-revisi";
+    const uploadFile = requiresUpload
+      ? await validateUpload(
+          form.get("file"),
+          command === "upload-checklist" && form.get("nomorItem") === "0",
+        )
+      : null;
     const uploads = { file: uploadFile };
 
     const result = await semproMutation(
@@ -260,13 +313,9 @@ export async function semproAction(
       },
     );
 
-    revalidatePath("/sempro/pendaftaran");
-    revalidatePath("/sempro/status");
-    revalidatePath("/sempro/verifikasi");
-    revalidatePath("/sempro/jadwal");
-    revalidatePath("/sempro/konfirmasi-jadwal");
-    revalidatePath("/sempro/kehadiran");
-    revalidatePath("/sempro/hasil");
+    for (const path of getSemproTargetedPaths(command)) {
+      revalidatePath(path);
+    }
 
     return { success: "Tindakan berhasil diproses.", result };
   } catch (error) {

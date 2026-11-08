@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { AccountError, accountTransaction, checkedActor } from "@/lib/accounts/store";
 import { canReadTitle } from "@/lib/academic/policy";
-import { readStoredFile } from "@/lib/academic/files";
+import { createSecureFileResponse, readStoredFile } from "@/lib/academic/files";
 import { idSchema } from "@/lib/accounts/validation";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ kind: string; id: string; file: string }> }) {
@@ -34,11 +34,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ kin
   if (!relative) return new NextResponse(null, { status: 404 });
   try {
     const bytes = await readStoredFile(relative, kind === "proposal" ? ["private", "public"] : ["public"]);
-    const extension = relative.split(".").pop()?.toLowerCase();
-    const mime = ({ pdf: "application/pdf", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png" } as Record<string, string>)[extension ?? ""] ?? "application/octet-stream";
-    return new NextResponse(new Uint8Array(bytes), { headers: {
-      "Content-Type": mime, "Content-Disposition": `attachment; filename="${kind}-${rawId}-${file}.${["pdf", "jpg", "jpeg", "png"].includes(extension ?? "") ? extension : "bin"}"`,
-      "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
-    } });
+    return createSecureFileResponse(bytes, `${kind}-${rawId}-${file}`, {
+      disposition: "attachment",
+      fallbackExtension: "bin",
+    });
   } catch { return new NextResponse(null, { status: 404 }); }
 }

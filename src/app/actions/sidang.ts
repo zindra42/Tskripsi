@@ -10,27 +10,12 @@ import { validateUpload, type Upload } from "@/lib/academic/files";
 import { initialize, updateChecklist, submit, verifyChecklist, verifyBatch, returnRegistration } from "@/lib/sidang/registration";
 import { assignExaminers, schedule, confirm, cancelSchedule, requestChange, decideRequest, remind, emergencyAssignment } from "@/lib/sidang/scheduling";
 import { score, latePermission, examinerDecision, approveResult, uploadRevision, reviewRevision } from "@/lib/sidang/scoring";
-import { saveAnnouncement, archiveAnnouncement, readAnnouncement, processScheduled } from "@/lib/support/announcements";
-import { correctSidang } from "@/lib/support/corrections";
 import { processReminders } from "@/lib/sidang/reminders";
-import { reviewSemproRevision } from "@/lib/support/sempro-revisions";
-import { rollbackAudit } from "@/lib/support/audit-rollback";
 
-export { announcementAction } from "./announcements";
-export { supportAction } from "./support";
 
 export type SidangFormState = { error?: string; success?: string; id?: string };
 
-function getTargetedPaths(command: string): string[] {
-  if (command.startsWith("announcement-")) {
-    return ["/pengumuman", "/pengumuman-publik", "/dashboard"];
-  }
-  if (command === "correction" || command === "audit-rollback") {
-    return ["/audit", "/koreksi-proses", "/dashboard"];
-  }
-  if (command === "sempro-review-revision") {
-    return ["/sempro", "/dashboard"];
-  }
+function getTargetedPaths(): string[] {
   return ["/sidang", "/dashboard"];
 }
 
@@ -79,17 +64,10 @@ export async function sidangAction(_state: SidangFormState, form: FormData): Pro
         case "result": return approveResult(context, input);
         case "upload-revision": return uploadRevision(context, input, uploads);
         case "review-revision": return reviewRevision(context, input);
-        case "sempro-review-revision": return reviewSemproRevision(context, input);
-        case "announcement-save": return saveAnnouncement(context, input, uploads);
-        case "announcement-archive": return archiveAnnouncement(context, input);
-        case "announcement-read": return readAnnouncement(context, input);
-        case "announcement-process": return processScheduled(context);
-        case "correction": return correctSidang(context, input);
-        case "audit-rollback": return rollbackAudit(context, input);
         default: throw new AccountError("Perintah tidak dikenal.");
       }
     });
-    for (const path of getTargetedPaths(command)) revalidatePath(path, "layout");
+    for (const path of getTargetedPaths()) revalidatePath(path, "layout");
     return { success: result && typeof result === "object" && "message" in result ? String(result.message) : "Perubahan tersimpan.", ...(result && typeof result === "object" && "id" in result ? { id: String(result.id) } : {}) };
   } catch (error) {
     if (error instanceof z.ZodError) return { error: "Periksa data formulir dan lengkapi semua kolom wajib." };

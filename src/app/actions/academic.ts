@@ -16,6 +16,72 @@ import { matrixFields, reason } from "@/lib/academic/validation";
 export type SimilarityReport = Awaited<ReturnType<typeof checkSimilarity>>;
 export type AcademicFormState = { error?: string; success?: string; result?: SimilarityReport };
 
+function getAcademicTargetedPaths(command: string): { path: string; type?: "layout" | "page" }[] {
+  switch (command) {
+    case "draft":
+    case "submit-title":
+    case "approve-title":
+    case "revise-title":
+    case "cancel-title":
+    case "archive-title":
+    case "assign":
+    case "cancel-supervisor":
+      return [
+        { path: "/judul", type: "layout" },
+        { path: "/dashboard", type: "layout" },
+      ];
+    case "submit-administration":
+    case "draft-administration":
+    case "remove-administration-file":
+    case "approve-administration":
+    case "reject-administration":
+      return [
+        { path: "/administrasi", type: "page" },
+        { path: "/dashboard", type: "layout" },
+      ];
+    case "add-log":
+    case "cancel-log":
+    case "note-log":
+    case "issue-acc":
+    case "revoke-acc":
+    case "schedule":
+    case "edit-schedule":
+    case "confirm-schedule":
+    case "reschedule":
+    case "complete-schedule":
+    case "cancel-schedule":
+      return [
+        { path: "/bimbingan", type: "layout" },
+        { path: "/dashboard", type: "layout" },
+      ];
+    case "submit-change":
+    case "approve-change-supervisor":
+    case "reject-change-supervisor":
+    case "approve-change-final":
+    case "reject-change-final":
+      return [
+        { path: "/judul", type: "layout" },
+        { path: "/bimbingan", type: "layout" },
+        { path: "/dashboard", type: "layout" },
+      ];
+    case "read-notifications":
+      return [
+        { path: "/notifikasi", type: "page" },
+        { path: "/dashboard", type: "layout" },
+      ];
+    case "similarity":
+      return [];
+    default:
+      return [
+        { path: "/judul", type: "layout" },
+        { path: "/bimbingan", type: "layout" },
+        { path: "/administrasi", type: "page" },
+        { path: "/notifikasi", type: "page" },
+        { path: "/dashboard", type: "layout" },
+      ];
+  }
+}
+
 export async function academicAction(_state: AcademicFormState, form: FormData): Promise<AcademicFormState> {
   if (!await hasTrustedOrigin()) return { error: "Permintaan tidak dapat diverifikasi. Muat ulang halaman." };
   const session = await requireSession();
@@ -32,9 +98,13 @@ export async function academicAction(_state: AcademicFormState, form: FormData):
         bidang_keahlian_id: form.get("bidang_keahlian_id"), bidang_keahlian_2_id: form.get("bidang_keahlian_2_id"),
       }];
     }
+    const isTitleUpload = command === "draft" || command === "submit-title";
+    const isAdministrationUpload = command === "submit-administration" || command === "draft-administration";
     const uploads = {
-      proposal: await validateUpload(form.get("proposal"), true), kwitansi: await validateUpload(form.get("kwitansi")),
-      transfer: await validateUpload(form.get("transfer")), krs: await validateUpload(form.get("krs")),
+      proposal: isTitleUpload ? await validateUpload(form.get("proposal"), true) : null,
+      kwitansi: isAdministrationUpload ? await validateUpload(form.get("kwitansi")) : null,
+      transfer: isAdministrationUpload ? await validateUpload(form.get("transfer")) : null,
+      krs: isAdministrationUpload ? await validateUpload(form.get("krs")) : null,
     };
     const result = await academicMutation(session, String(form.get("key")), command, input, uploads, async (context) => {
       switch (command) {
@@ -77,10 +147,10 @@ export async function academicAction(_state: AcademicFormState, form: FormData):
         default: ensure(false, "Tindakan tidak dikenal.");
       }
     });
-    revalidatePath("/judul", "layout");
-    revalidatePath("/bimbingan", "layout");
-    revalidatePath("/administrasi");
-    revalidatePath("/notifikasi");
+    for (const target of getAcademicTargetedPaths(command)) {
+      if (target.type) revalidatePath(target.path, target.type);
+      else revalidatePath(target.path);
+    }
     return { success: command === "similarity" ? "Pengecekan kemiripan selesai." : "Perubahan berhasil disimpan.",
       result: command === "similarity" ? result as SimilarityReport : undefined };
   } catch (error) {

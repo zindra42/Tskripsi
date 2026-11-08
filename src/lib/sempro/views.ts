@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import type { AuthenticatedSession } from "@/lib/auth/session";
+import { getCachedActiveLecturers } from "@/lib/support/master-data";
 
 export async function getPendaftaranSemproView(
   session: AuthenticatedSession,
@@ -92,20 +93,7 @@ export async function getPenjadwalanSemproView() {
     orderBy: { updatedAt: "desc" },
   });
 
-  const activeLecturers = await prisma.pengguna.findMany({
-    where: {
-      dosen: { isNot: null },
-      statusAkun: "aktif",
-      deletedAt: null,
-    },
-    select: {
-      id: true,
-      nama: true,
-      email: true,
-      dosen: { select: { nidn: true, kuotaBimbingan: true } },
-    },
-    orderBy: { nama: "asc" },
-  });
+  const activeLecturers = await getCachedActiveLecturers();
 
   return { listSemproSiapJadwal, activeLecturers };
 }

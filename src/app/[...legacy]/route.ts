@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { accountTransaction, checkedActor } from "@/lib/accounts/store";
 import { canManage } from "@/lib/accounts/policy";
-import { readStoredFile } from "@/lib/academic/files";
+import { createSecureFileResponse, readStoredFile } from "@/lib/academic/files";
 import { legacyRequest } from "@/lib/migration/urls";
 import { manifestEntry } from "@/lib/migration/contract";
 
@@ -94,8 +94,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ lega
     if (resolved.destination) return redirect(resolved.destination);
     if (!resolved.file) return new NextResponse(null, { status: 404 });
     const bytes = await readStoredFile(resolved.file, resolved.disks);
-    const pdf = bytes.subarray(0, 5).toString() === "%PDF-", png = bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])), jpg = bytes[0] === 255 && bytes[1] === 216;
-    if (!pdf && !png && !jpg) return new NextResponse(null, { status: 415 });
-    return new NextResponse(new Uint8Array(bytes), { headers: { "Content-Type": pdf ? "application/pdf" : png ? "image/png" : "image/jpeg", "Content-Disposition": `attachment; filename="dokumen.${pdf ? "pdf" : png ? "png" : "jpg"}"`, "Cache-Control": "private, no-store" } });
+    return createSecureFileResponse(bytes, "dokumen", {
+      disposition: "attachment",
+      unsupportedMessage: null,
+    });
   } catch { return new NextResponse(null, { status: 404 }); }
 }

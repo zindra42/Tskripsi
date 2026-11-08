@@ -3,7 +3,7 @@ import Link from "next/link";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { isRole, roleLabels } from "@/lib/auth/policy";
 import { requireArea } from "@/lib/auth/session";
-import { dashboardIndicators } from "@/lib/support/dashboard";
+import { getCachedDashboardIndicators } from "@/lib/support/dashboard";
 import { DashboardOverview } from "@/components/dashboard-overview";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export default async function RoleDashboard({ params }: { params: Promise<{ role
   const { role } = await params;
   if (!isRole(role)) notFound();
   const session = await requireArea(role);
-  const indicators = await dashboardIndicators(session);
+  const indicators = await getCachedDashboardIndicators(session);
   return <WorkspaceShell session={session}>
     <p className="mb-2 text-sm text-slate-500">Area {roleLabels[role]}</p>
     <h1 className="mb-6 text-3xl font-bold">Dashboard {roleLabels[role]}</h1>

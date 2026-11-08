@@ -22,6 +22,11 @@ import {
   renderSuratUndanganPdf,
   renderBeritaAcaraPdf,
 } from "../src/lib/sempro/documents";
+import {
+  getJenisDokumenLabel,
+  getStatusInfo,
+  formatWaktuTerbit,
+} from "../src/lib/documents/labels";
 
 test("kebijakan sempro: kalkulasi nilai, predikat, dan pembobotan", () => {
   // Test komponen rata-rata
@@ -136,6 +141,52 @@ test("kebijakan sempro: penomoran surat, bulan romawi, dan masking identitas", (
   assert.deepEqual(SUBMIT_REQUIRED_ITEMS, [0, 1, 6, 7, 8, 9, 10]);
   assert.equal(SEMPRO_CHECKLIST_DEFINITIONS[0].namaDokumen, "File Proposal Skripsi");
   assert.equal(SEMPRO_CHECKLIST_DEFINITIONS[7].jenisBentuk, "centang");
+});
+
+test("penyelarasan label dokumen resmi dan status verifikasi publik", () => {
+  // Seluruh 9 jenis dokumen institusional
+  assert.equal(getJenisDokumenLabel("acc"), "Surat Keterangan ACC Seminar Proposal Tugas Akhir");
+  assert.equal(getJenisDokumenLabel("acc_sidang"), "Surat Keterangan Persetujuan (ACC) Sidang Skripsi");
+  assert.equal(getJenisDokumenLabel("undangan"), "Surat Undangan Seminar Proposal Tugas Akhir");
+  assert.equal(getJenisDokumenLabel("undangan_sidang"), "Surat Undangan Sidang Skripsi");
+  assert.equal(getJenisDokumenLabel("form_nilai"), "Form Penilaian Seminar Proposal Skripsi");
+  assert.equal(getJenisDokumenLabel("form_nilai_sidang"), "Form Penilaian Sidang Skripsi");
+  assert.equal(getJenisDokumenLabel("form_penilaian_sidang"), "Form Penilaian Sidang Skripsi");
+  assert.equal(getJenisDokumenLabel("rekap_nilai_sidang"), "Rekap Data Penilaian Sidang Skripsi");
+  assert.equal(getJenisDokumenLabel("berita_acara"), "Berita Acara Seminar Proposal");
+  assert.equal(getJenisDokumenLabel("berita_acara_sidang"), "Berita Acara Sidang Skripsi");
+  assert.equal(getJenisDokumenLabel("dokumen_tidak_dikenal"), "Dokumen Akademik");
+
+  // Status badge & info
+  const sahDoc = getStatusInfo("sah", "undangan");
+  assert.equal(sahDoc.label, "Dokumen Sah & Terverifikasi");
+  assert.equal(sahDoc.color, "emerald");
+
+  const sahFormNilai = getStatusInfo("sah", "form_nilai");
+  assert.equal(sahFormNilai.label, "Nilai Telah Dikunci & Sah");
+
+  const berlangsung = getStatusInfo("berlangsung");
+  assert.equal(berlangsung.label, "Penilaian Sedang Berlangsung (Belum Dikunci)");
+  assert.equal(berlangsung.color, "amber");
+
+  const digantikan = getStatusInfo("digantikan");
+  assert.equal(digantikan.label, "Dokumen Telah Digantikan (Versi Baru Telah Terbit)");
+  assert.equal(digantikan.color, "slate");
+
+  const dicabut = getStatusInfo("dicabut");
+  assert.equal(dicabut.label, "Dokumen Telah Dicabut");
+  assert.equal(dicabut.color, "rose");
+
+  const batal = getStatusInfo("dibatalkan");
+  assert.equal(batal.label, "Dibatalkan / Tidak Berlaku");
+
+  // Format tanggal WITA
+  assert.equal(formatWaktuTerbit(null), "-");
+  const tgl = new Date("2026-11-08T03:30:00Z"); // 11:30 WITA
+  const formatted = formatWaktuTerbit(tgl);
+  assert.match(formatted, /WITA/);
+  assert.match(formatted, /2026/);
+  assert.match(formatted, /November/);
 });
 
 test("mesin QR code murni: menghasilkan matriks dan SVG yang valid", () => {

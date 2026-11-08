@@ -8,11 +8,12 @@ import type { Prisma } from "@/generated/prisma/client";
 import { activeGuidanceWhere } from "@/lib/academic/store";
 import { revisionComplete, witaToday } from "@/lib/sidang/policy";
 import { announcementVisible } from "@/lib/support/policy";
+import { getCachedSystemSettings, getCachedActiveLecturersWithSupervisions } from "@/lib/support/master-data";
 
 export async function commonOverview(session: AuthenticatedSession) {
   const db = database(), now = new Date();
-  const [settings, rows] = await Promise.all([
-    db.pengaturanSistem.findMany(),
+  const [values, rows] = await Promise.all([
+    getCachedSystemSettings(),
     db.pengumuman.findMany({ where: { deletedAt: null, status: "terbit", AND: [
       { OR: [{ tampilMulai: null }, { tampilMulai: { lte: now } }] },
       { OR: [{ tampilSelesai: null }, { tampilSelesai: { gte: now } }] },
@@ -20,7 +21,6 @@ export async function commonOverview(session: AuthenticatedSession) {
         ...(session.user.role === "sekpro" ? [{ targetPeran: { array_contains: ["sekprodi"] } }] : [])] },
     ] }, orderBy: [{ disematkan: "desc" }, { terbitAt: "desc" }, { id: "desc" }], take: 3 }),
   ]);
-  const values = Object.fromEntries(settings.map((s) => [s.kunci, s.nilai]));
   return { period: `${values.periode_akademik_mulai ?? "Belum diatur"} s/d ${values.periode_akademik_selesai ?? "Belum diatur"}`,
     announcements: rows.filter((r) => announcementVisible(r, session.user.role)) };
 }
@@ -94,8 +94,7 @@ export async function managementOverview(session: AuthenticatedSession) {
   const [critical, lecturers, approved, sempro, sidang, finished] = await Promise.all([
     db.pengguna.findMany({ where: { role: "mahasiswa", statusAkun: "aktif", deletedAt: null, mahasiswa: { semester: { gte: 13 } } },
       select: { id: true, nama: true, mahasiswa: true }, orderBy: { nama: "asc" }, take: 20 }),
-    db.pengguna.findMany({ where: { role: { in: ["dosen", "kaprodi", "sekpro"] }, statusAkun: "aktif", deletedAt: null, dosen: { isNot: null } },
-      select: { id: true, nama: true, dosen: true, _count: { select: { primarySupervisions: { where: activeGuidanceWhere }, secondarySupervisions: { where: activeGuidanceWhere } } } }, orderBy: { nama: "asc" } }),
+    getCachedActiveLecturersWithSupervisions(),
     db.pengajuanJudul.count({ where: { status: "disetujui", deletedAt: null, isDiarsipkan: false } }),
     db.beritaAcara.count({ where: { jenis: "sempro", hasil: { in: ["lulus", "lulus_revisi"] } } }),
     db.pendaftaranSidang.count({ where: { statusDraft: "diajukan" } }),
@@ -143,7 +142,7 @@ export async function systemOverview(session: AuthenticatedSession) {
 export async function administrationOverview(session: AuthenticatedSession) {
   if (!["admin_keuangan", "superadmin"].includes(session.user.role)) return null;
   const db = database();
-  const settings = Object.fromEntries((await db.pengaturanSistem.findMany()).map((r) => [r.kunci, r.nilai]));
+  const settings = await getCachedSystemSettings();
   if (!settings.periode_akademik_mulai || !settings.periode_akademik_selesai) return null;
   const periode = `${settings.periode_akademik_mulai} s/d ${settings.periode_akademik_selesai}`;
   const [verified, rejected, pending] = await Promise.all(["terverifikasi", "ditolak", "menunggu_verifikasi"].map((statusVerifikasi) =>
