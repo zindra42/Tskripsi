@@ -1,10 +1,12 @@
 ﻿import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Suspense } from "react";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { isRole, roleLabels } from "@/lib/auth/policy";
 import { requireArea } from "@/lib/auth/session";
 import { getCachedDashboardIndicators } from "@/lib/support/dashboard";
 import { DashboardOverview } from "@/components/dashboard-overview";
+import { DashboardOverviewSkeleton } from "@/components/skeleton";
 
 export const dynamic = "force-dynamic";
 export default async function RoleDashboard({ params }: { params: Promise<{ role: string }> }) {
@@ -25,6 +27,8 @@ export default async function RoleDashboard({ params }: { params: Promise<{ role
         <span className="mb-3 block text-3xl font-bold">{item.count}</span><h2 className="font-semibold">{item.label}</h2>
       </Link>)}
     </section>
-    <DashboardOverview session={session} />
+    <Suspense fallback={<DashboardOverviewSkeleton />}>
+      <DashboardOverview session={session} />
+    </Suspense>
   </WorkspaceShell>;
 }

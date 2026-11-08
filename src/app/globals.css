@@ -13,20 +13,59 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #e2e8f0 0%,
+    #f8fafc 50%,
+    #e2e8f0 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
 @layer base {
   label { @apply mb-2 block text-sm font-semibold; }
   input:not([type="checkbox"]), select, textarea {
-    @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-950;
+    @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-950 transition-colors duration-150 focus:border-amber-500;
   }
   input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible {
     @apply outline-2 outline-offset-4 outline-amber-500;
   }
-  button { @apply cursor-pointer; }
-  button:disabled { @apply cursor-wait opacity-60; }
+  button {
+    @apply cursor-pointer transition-all duration-200 ease-out;
+  }
+  button:not(:disabled):active {
+    @apply scale-[0.98];
+  }
+  button:disabled {
+    @apply cursor-wait opacity-60 pointer-events-none;
+  }
 }
 
 @layer components {
-  .button { @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-[#14213d] px-5 py-3 text-sm font-semibold text-white hover:bg-[#25395e]; }
-  .button-secondary { @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-[#14213d] hover:bg-slate-100; }
-  .panel { @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8; }
+  .button {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-[#14213d] px-5 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:bg-[#25395e] hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0 active:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500 disabled:pointer-events-none disabled:opacity-60 disabled:transform-none disabled:shadow-none;
+  }
+  .button-secondary {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-[#14213d] shadow-sm transition-all duration-200 ease-out hover:bg-slate-50 hover:border-slate-400 hover:shadow-sm hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0 active:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500 disabled:pointer-events-none disabled:opacity-60 disabled:transform-none disabled:shadow-none;
+  }
+  .panel {
+    @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 transition-all duration-200 ease-out;
+  }
+  .card-hover, a.panel, .panel-interactive {
+    @apply transition-all duration-200 ease-out hover:border-slate-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer;
+  }
+  .card-subtle-hover {
+    @apply transition-all duration-200 ease-out hover:border-slate-300 hover:shadow-sm hover:-translate-y-0.5;
+  }
 }

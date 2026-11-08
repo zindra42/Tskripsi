@@ -12,9 +12,9 @@ export async function DashboardOverview({ session }: { session: AuthenticatedSes
     <section className="panel"><h2 className="mb-3 text-xl font-semibold">Periode Akademik Aktif</h2><p>{common.period}</p></section>
     {administration && <section className="panel"><h2 className="mb-4 text-xl font-semibold">Antrean Verifikasi Administrasi Awal</h2><p>{administration.pending} menunggu verifikasi · {administration.verified} terverifikasi periode ini · {administration.rejected} ditolak periode ini</p><Link className="mt-4 inline-block underline" href="/administrasi">Verifikasi Pembayaran →</Link></section>}
     {student && <section className="panel"><h2 className="mb-4 text-xl font-semibold">Alur dan Tahapan Skripsi</h2>
-      <ol className="grid gap-3 sm:grid-cols-2">{student.steps.map((s, i) => <li key={s.label} className="rounded border border-slate-200 p-3" aria-current={s.status === "aktif" ? "step" : undefined}>
-        <span className="text-sm text-slate-500">Tahap {i + 1}: {s.status}</span><p><Link className="underline" href={s.href}>{s.label}</Link></p>
-      </li>)}</ol><h3 className="mt-5 font-semibold">Langkah Berikutnya</h3><Link className="mt-2 block underline" href={student.href}>{student.next}</Link>
+      <ol className="grid gap-3 sm:grid-cols-2">{student.steps.map((s, i) => <li key={s.label} className="rounded-xl border border-slate-200 p-3 card-subtle-hover" aria-current={s.status === "aktif" ? "step" : undefined}>
+        <span className="text-sm text-slate-500">Tahap {i + 1}: {s.status}</span><p><Link className="underline hover:text-sky-700" href={s.href}>{s.label}</Link></p>
+      </li>)}</ol><h3 className="mt-5 font-semibold">Langkah Berikutnya</h3><Link className="mt-2 block underline hover:text-sky-700" href={student.href}>{student.next}</Link>
     </section>}
     {lecturer && <>
       <section className="panel"><h2 className="mb-4 text-xl font-semibold">Antrean Tindakan Dosen</h2><p className="mb-4">Kapasitas Kuota: {lecturer.total} / {lecturer.quota} Mahasiswa</p>
