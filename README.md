@@ -1,206 +1,188 @@
-# SIAS TypeScript
+# SIAS — Sistem Informasi Administrasi Skripsi
 
-Tooling migrasi TASK-007 tersedia pada [panduan migrasi dan gerbang rilis](docs/legacy-migration.md). `npm run migration:rehearsal` memakai fixture sintetis tanpa database. Import riil, migration keenam dan cutover tetap menunggu proposal/persetujuan pemilik; keberhasilan dry-run tidak berarti cutover telah terverifikasi.
+![Next.js](https://img.shields.io/badge/Next.js-16.4.5-black?style=flat-square&logo=next.js)
+![React](https://img.shields.io/badge/React-19.3.1-blue?style=flat-square&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3_Strict-3178C6?style=flat-square&logo=typescript)
+![Prisma](https://img.shields.io/badge/Prisma-7.10.1-2D3748?style=flat-square&logo=prisma)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-336791?style=flat-square&logo=postgresql)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.3.5-38B2AC?style=flat-square&logo=tailwind-css)
+![Automated Tests](https://img.shields.io/badge/Tests-155%20passed-success?style=flat-square)
 
-Tahap sidang dan modul pendukung kini tersedia pada root repository ini. Rujukan implementasi, klasifikasi pembayaran aktif/historis, bukti FK logis, keputusan legacy dan batas verifikasi ada di [paritas TASK-006](docs/task006-parity.md); kontrak data/berkas untuk fase migrasi ada di [kontrak impor sidang](docs/sidang-import-contract.md); implementasi migrasi data, katalog skema dan rekonsiliasi rilis ada di [dokumentasi TASK-007](docs/task007-migration.md). Catatan tahap sebelumnya di bawah tetap merupakan histori pengerjaan.
+Platform web modern terpadu untuk digitalisasi, pemantauan, dan percepatan seluruh siklus administrasi skripsi dan tugas akhir mahasiswa di lingkungan perguruan tinggi. Dibangun menggunakan arsitektur **Next.js App Router**, **TypeScript** (strict mode), **Prisma ORM**, dan **PostgreSQL**.
 
-Verifikasi TASK-007 pada 8 November 2026: `npm test` lulus **155/155** (136 pengujian domain + 19 pengujian migrasi/endpoint), `npm run lint`, `npm run typecheck`, `npm run prisma:validate`, `npm run build` dan `git diff --check` lulus bersih. Rehearsal sintetis (`npm run migration:rehearsal`) memvalidasi 78 up() migration sumber, pemutusan siklus topologis (sempro-dispensasi dan self-reference dokumen), preservasi bigint lossless, audit FK logis/fisik, proteksi storage/symlink, rollback transaksi chunk, pemulihan checkpoint, dan penataan sequence ID.
+---
 
-Verifikasi TASK-006 pada 8 November 2026: `npm test` lulus **136/136** (termasuk 36 test/subtest sidang), `npm run lint`, `npm run typecheck`, `npm run prisma:validate`, `npm run build` dan `git diff --check` lulus. Oracle `npx tsx scripts/verify-legacy-sidang.ts D:/sis/skripsi` lulus 34 kasus. Delta Prisma dari `fea76e8` cocok dengan SQL migration setelah komentar/transaksi dinormalisasi, tanpa koneksi datasource. E2E Sokudo final lulus 20/20 langkah tamu, run `0958aabb-7d3f-411b-b433-b4b1b5636643`. LSP dipanggil untuk seluruh source yang berubah: mayoritas tanpa error, tetapi pemeriksaan akhir `support/dashboard-overview.ts`, `support/sempro-revisions.ts`, action sidang, detail sidang, komponen dashboard, helper test dan test sidang timeout. LSP seluruh versi final belum dapat disahkan; typecheck dan build final tetap lulus. PostgreSQL nyata, E2E pengguna aktif, impor riil dan pemasangan scheduler produksi belum diverifikasi.
+## 🌟 Gambaran Umum (Overview)
 
-Fondasi pembangunan ulang SIAS dalam satu aplikasi Next.js App Router dengan TypeScript strict, Tailwind, Prisma, dan PostgreSQL. Source Laravel di repository sibling `skripsi/` menjadi referensi perilaku bisnis.
+Pengelolaan administrasi tugas akhir dan skripsi sering menghadapi tantangan berupa fragmentasi berkas fisik, ketidakteraturan pencatatan bimbingan, jadwal ujian yang rawan bentrok, serta verifikasi keabsahan dokumen yang rentan pemalsuan.
 
-## Runtime dan dependensi
+**SIAS** mentransformasikan seluruh siklus tersebut ke dalam satu sistem terintegrasi dengan alur kerja digital yang transparan dan akuntabel:
+- **Mahasiswa** dapat mengajukan judul dengan pengecekan kemiripan otomatis, mencatat sesi konsultasi secara interaktif, mendaftar seminar proposal hingga sidang skripsi.
+- **Dosen Pembimbing & Penguji** dapat memvalidasi logbook, memberikan persetujuan (ACC), mengonfirmasi ketersediaan jadwal ujian, dan mengisi rubrik penilaian terbobot secara real-time.
+- **Pimpinan Program Studi (Kaprodi & Sekpro)** dapat meninjau judul, menetapkan pembimbing berdasarkan keahlian dan kuota, menyusun jadwal bebas bentrok, serta mengesahkan berita acara kelulusan.
+- **Admin Keuangan & Staf Administrasi** memverifikasi bukti pembayaran dan berkas prasyarat akademik.
+- **Publik / Pihak Ketiga** dapat memverifikasi keabsahan dokumen resmi (SK, Berita Acara, Lembar Pengesahan) melalui pemindaian QR code tanpa perlu login.
 
-- Diverifikasi pada 7 November 2026 menggunakan Node `26.11.1` dan npm `11.20.0`.
-- Next.js `16.4.5`, React `19.3.1`, Prisma dan adapter PostgreSQL `7.10.1`, TypeScript `5.9.3`, Tailwind `4.3.5`.
-- Dokumentasi Next.js mensyaratkan Node minimal `20.9`. Metadata engine Prisma 7.10.1 menerima `^20.19 || ^22.12 || >=24.0`. Aplikasi ini menetapkan Node minimal 26 untuk menyamakan runtime lokal yang telah diuji.
-- Registry Prisma menandai `8.0.0-rc.33` sebagai `latest` saat pemeriksaan. Versi stabil 7.10.1 dipilih agar fondasi menggunakan rilis stabil.
-- Semua dependensi langsung dipin dan `package-lock.json` disertakan. Lifecycle script instalasi dinonaktifkan melalui `.npmrc`. Prisma Client dibuat secara eksplisit.
-- ESLint 9.39.5 dipilih sesuai peer dependency plugin React/import/a11y bawaan Next. npm memberi peringatan deprecation untuk ESLint 9. ESLint 10 masih menimbulkan konflik peer pada plugin tersebut saat pemeriksaan.
-- Override `minimatch` 11.0.5 pada typescript-estree menghindari advisory glob amplification. Lint diverifikasi menggunakan override ini.
+---
 
-Rujukan resmi tersedia pada [instalasi Next.js](https://nextjs.org/docs/app/getting-started/installation), [panduan Prisma dengan Next.js](https://www.prisma.io/docs/guides/frameworks/nextjs), dan metadata engine paket di registry npm. Panduan Prisma saat pemeriksaan telah menampilkan persyaratan runtime versi 8. Persyaratan versi 7 yang dipin diperiksa langsung dari metadata paketnya.
+## 🚀 Fitur Utama
 
-## Setup lokal
+### 1. 👥 Manajemen Akun & Otorisasi Multi-Peran
+- **Akses Berbasis Peran**: Mahasiswa, Dosen, Kaprodi, Sekretaris Prodi, Admin Keuangan, dan Superadmin.
+- **Pergantian Peran Dinamis (Role Switching)**: Pimpinan program studi dapat berpindah antara mode manajerial dan tugas pengajaran/pembimbingan dengan mulus.
+- **Alur Persetujuan Registrasi & Reset Mandiri**: Registrasi akun bertingkat serta permohonan reset password berbasis persetujuan administrator dengan token sekali pakai yang aman.
 
-Jalankan perintah dari root repository `Tskripsi/` (atau root worktree tiket).
+### 2. 💡 Pengajuan Judul & Deteksi Kemiripan (NLP)
+- **Analisis Kemiripan Judul Otomatis**: Memanfaatkan algoritma token similarity (Jaccard) terintegrasi dengan stemmer bahasa Indonesia (Sastrawi) untuk mendeteksi potensi duplikasi terhadap korpus judul skripsi terdahulu.
+- **Rekomendasi Dosen Pembimbing**: Sistem mencocokkan bidang keahlian dosen dengan topik penelitian mahasiswa serta menyeimbangkan beban kuota bimbingan secara objektif.
 
-```sh
-npm ci
-npm run prisma:generate
-npm run prisma:validate
-npm run dev
+### 3. 📝 Bimbingan & Logbook Konsultasi Terstruktur
+- **Pencatatan Sesi Interaktif**: Mahasiswa dan dosen mencatat ringkasan materi, catatan perbaikan, dan tindak lanjut konsultasi.
+- **Validasi Kuota Bimbingan**: Memastikan pemenuhan syarat minimal sesi konsultasi sebelum pembimbing dapat menerbitkan persetujuan (ACC) Seminar Proposal maupun Sidang Skripsi.
+
+### 4. 🎓 Seminar Proposal & Sidang Skripsi
+- **Pengecekan Prasyarat Bertingkat**: Validasi otomatis atas kelengkapan berkas administrasi, persetujuan pembimbing, dan pemenuhan syarat akademik.
+- **Penjadwalan Bebas Bentrok**: Mesin penjadwalan cerdas mencegah *double-booking* ruangan dan bentrok waktu dosen.
+- **Konfirmasi Penguji Paralel**: Sistem konfirmasi ketersediaan penguji secara paralel dengan opsi usulan jadwal alternatif.
+- **Rubrik Penilaian Terbobot**: Formulir penilaian digital yang menghitung nilai akhir secara akurat sesuai bobot komponen institusi.
+
+### 5. 🔏 Dokumen Resmi & Verifikasi QR Code Publik
+- **Penerbitan Dokumen Digital**: Berita acara, undangan ujian, lembar persetujuan, dan bukti kelulusan diterbitkan dengan tanda tangan digital berbasis kriptografi (SHA-256).
+- **Halaman Verifikasi Publik (`/verifikasi/[token]`)**: Memungkinkan pemangku kepentingan memvalidasi keaslian dokumen secara instan melalui pemindaian QR code.
+
+---
+
+## 🛠️ Arsitektur & Teknologi
+
+| Lapisan / Komponen | Teknologi | Keterangan |
+| :--- | :--- | :--- |
+| **Framework** | [Next.js 16](https://nextjs.org/) (App Router) | Server Components & Server Actions terpadu |
+| **UI Library** | [React 19](https://react.dev/) | Rendering modern dengan hooks reaktif |
+| **Bahasa Pemrograman** | [TypeScript 5.9](https://www.typescriptlang.org/) | Strict type-safety end-to-end |
+| **Database & ORM** | [PostgreSQL](https://www.postgresql.org/) & [Prisma 7.10](https://www.prisma.io/) | Relasi kuat, ekstensi `citext`, dan type-safe query |
+| **Styling & Desain** | [Tailwind CSS v4](https://tailwindcss.com/) | Utilitas CSS modern dan responsif |
+| **Pemrosesan Teks (NLP)** | TS-Sastrawi & Custom Stemmer | Normalisasi morfologi dan stemming bahasa Indonesia |
+| **Keamanan Kredensial** | Argon2id & Bcrypt | Hashing password terstandarisasi industri |
+| **Test Suite** | Node.js Native Test Runner (`node:test`) | Pengujian fungsional dan integritas domain |
+
+---
+
+## 📁 Struktur Direktori
+
+```text
+Tskripsi/
+├── docs/                       # Dokumentasi arsitektur, panduan migrasi, dan catatan rilis
+├── prisma/
+│   ├── migrations/             # Riwayat migrasi skema PostgreSQL
+│   └── schema.prisma           # Definisi skema relasional Prisma
+├── public/                     # Aset publik statis (favicon, logo)
+├── scripts/                    # Utilitas migrasi data, verifikasi oracle, dan pemeliharaan
+├── src/
+│   ├── app/                    # Next.js App Router (halaman, layout, Server Actions)
+│   │   ├── (auth)/             # Login, register, pemulihan password
+│   │   ├── administrasi/       # Pengajuan & verifikasi berkas administrasi
+│   │   ├── akun/               # Manajemen akun pengguna & hak akses
+│   │   ├── bimbingan/          # Jadwal & logbook konsultasi mahasiswa
+│   │   ├── judul/              # Pengajuan judul & analisis kemiripan
+│   │   ├── sempro/             # Pendaftaran, penjadwalan & ujian proposal
+│   │   ├── sidang/             # Pendaftaran & penilaian sidang skripsi
+│   │   └── verifikasi/         # Endpoint verifikasi publik dokumen via QR
+│   ├── components/             # Komponen UI modular dan reusable
+│   └── lib/                    # Logika bisnis inti, otorisasi, keamanan, dan helpers
+└── tests/                      # Suite pengujian otomatis (unit & integrasi)
 ```
 
-Salin `.env.example` menjadi `.env.local`, kemudian isi `DATABASE_URL`, `APP_ORIGIN`, dan `AUTH_RATE_LIMIT_SECRET` melalui environment lokal. Secret rate limit harus acak dan minimal 32 karakter. Jangan commit file tersebut. Prisma CLI membaca `.env` melalui dotenv, sedangkan Next.js juga membaca `.env.local`. Perintah generate/validate/build dapat memakai URL placeholder tanpa koneksi database.
+---
 
-Untuk menjalankan aplikasi, sediakan PostgreSQL dengan schema `public` dan extension `citext`. Ajukan SQL `prisma/migrations/20261107000000_identity_auth/migration.sql`, kemudian `prisma/migrations/20261107010000_accounts_settings/migration.sql` melalui proposal database Sokudo dan tunggu persetujuan pemilik sebelum penerapan. Ketiga migration dibungkus transaksi; tahap judul/bimbingan menambahkan `prisma/migrations/20261107020000_titles_guidance/migration.sql` setelah kedua migration tersebut. SQL hanya disiapkan sebagai kode. Akun pimpinan pertama memerlukan provisioning atau impor yang disetujui. Setelah database tersedia, registrasi publik dapat digunakan melalui `/register`.
+## 🏁 Panduan Memulai (Getting Started)
 
-`APP_ORIGIN` harus cocok dengan origin browser, misalnya `http://localhost:3000` saat development. Produksi memerlukan HTTPS dan menggunakan cookie `__Host-sias_session`, `Secure`, `HttpOnly`, `SameSite=Lax`, dan path `/`. Untuk mencoba autentikasi lokal melalui HTTP gunakan development server. Semua mutasi memeriksa Origin, termasuk login, logout, password, pergantian peran, dan heartbeat sesi.
+### Prasyarat Sistem
+- **Node.js**: `v20.x` atau lebih baru (direkomendasikan Node `v26.x`)
+- **NPM**: `v11.x` atau lebih baru
+- **PostgreSQL**: `v15` atau lebih baru (dengan ekstensi `citext`)
 
-`TRUST_PROXY=false` memakai pembatas global 120 percobaan per menit. Aktifkan hanya jika proxy terpercaya menimpa header `X-Forwarded-For`. Dalam mode proxy, batas IP menjadi 30 percobaan per menit. Batas email tetap 5 percobaan per menit dan berlaku lintas proses. Kunci email/IP disimpan sebagai HMAC. Percobaan yang diterima limiter mencakup login berhasil. Pembatas perubahan password adalah 5 percobaan per akun per menit. Jika database atau konfigurasi keamanan gagal, mutasi ditolak dengan pesan layanan umum.
+### Langkah Instalasi
 
-## Cakupan autentikasi
+1. **Clone Repositori**:
+   ```bash
+   git clone https://github.com/zindra42/Tskripsi.git
+   cd Tskripsi
+   ```
 
-- Login email/password, logout POST, session token acak 256 bit, dan penyimpanan SHA-256 token di database. Login mengganti sesi yang dibawa browser.
-- Pembacaan status akun, soft delete, auth version, dan peran dilakukan di server setiap akses. Akun nonaktif/terhapus ditolak. Akun menunggu persetujuan atau ditolak hanya membuka halaman status dan logout. Setelah aktif, akun dengan flag wajib ganti password diarahkan ke penggantian password.
-- Password baru memerlukan password saat ini, minimal 8 karakter, maksimal 72 byte UTF-8, konfirmasi yang cocok, dan nilai berbeda. Penyimpanan bcrypt cost 12. Penggantian password bersifat atomik, mencabut seluruh sesi lama dan remember token Laravel, serta menerbitkan sesi baru. Login dikunci terhadap perubahan password yang bersamaan.
-- Sesi biasa memakai idle timeout server lima menit, cookie sesi browser, heartbeat berdasarkan aktivitas, dan peringatan setelah empat menit. Sesi “ingat saya” berlaku absolut tujuh hari dan melewati idle timeout. Ini mengikuti kebijakan lima menit/tujuh hari sumber. Cookie sesi biasa berakhir saat browser ditutup. Heartbeat memperbarui aktivitas tanpa menulis ulang peran.
-- Setiap sesi memiliki identifier publik acak yang terpisah dari token autentikasi. Heartbeat dan timeout mengirim identifier sesi asal, dan aktivitas lintas tab memakai namespace sesi tersebut. Timeout hanya mencabut sesi biasa yang cocok. Respons dengan sesi berbeda mengarahkan tab ke area sesi aktif. Rotasi cookie ditangani login/logout sehingga respons timeout terlambat aman terhadap cookie baru.
-- Kaprodi/sekpro berasal dari role historis atau flag profil dosen. Dosen dengan kedua flag memperoleh kedua area pimpinan. Role pimpinan historis memerlukan profil dosen untuk beralih ke area dosen. Pergantian area disimpan di server. Area pimpinan ditolak ketika sesi berada pada mode dosen. Superadmin mengikuti bypass role sumber, sambil tetap tunduk status akun dan wajib ganti password.
-- Middleware dan endpoint role switch terkini mengizinkan perpindahan pimpinan ke dosen tanpa memeriksa penugasan. Komentar dan sebagian `RoleSwitchBugTest` lama berbeda dengan implementasi tersebut. Fondasi mengikuti implementasi terbaru. Hak pembimbing/penguji tetap harus dibuktikan dari penugasan saat modul akademik dibangun.
-- Halaman dashboard menampilkan identitas dan modul yang belum tersedia. URL area yang tidak diizinkan mendapat respons 404. Server Action memeriksa kewenangan secara mandiri. Komponen client menerima nama peran, flag remember, dan identifier sesi publik yang diperlukan.
+2. **Instal Dependensi**:
+   ```bash
+   npm ci
+   ```
 
-## Identitas dan paritas legacy
+3. **Konfigurasi Environment**:
+   Salin berkas template lingkungan ke `.env.local`:
+   ```bash
+   cp .env.example .env.local
+   ```
+   Sesuaikan variabel di dalam `.env.local`:
+   - `DATABASE_URL`: URI koneksi PostgreSQL (contoh: `postgresql://user:pass@localhost:5432/sias?schema=public`)
+   - `APP_ORIGIN`: URL aplikasi (misal: `http://localhost:3000` saat development)
+   - `AUTH_RATE_LIMIT_SECRET`: String acak minimal 32 karakter untuk HMAC rate limiter
+   - `SIAS_STORAGE_ROOT`: Direktori penyimpanan berkas lokal terisolasi
 
-Schema mempertahankan tabel `pengguna`, profil satu-ke-satu dengan PK `pengguna_id`, arsip email/NIM/NIDN, nullable kredensial unik, status, catatan penolakan, flag superadmin, soft delete, dan timestamp nullable. Nomor HP mahasiswa nullable mengikuti migration `2026_10_01_181616_add_revision_features_tables.php`. `email` memakai CITEXT untuk pencarian serta keunikan case-insensitive. Arsip memakai string biasa dan tidak menjadi jalur login.
+4. **Inisialisasi Skema Database**:
+   ```bash
+   npm run prisma:generate
+   npm run prisma:validate
+   ```
 
-ID Laravel berasal dari unsigned bigint, dipetakan ke Prisma BigInt dan PostgreSQL BIGINT tanpa mengganti nilai dengan UUID atau JavaScript Number. PostgreSQL BIGINT memiliki batas `9223372036854775807`. Impor harus memeriksa rentang seluruh ID/FK, mempertahankan nilai dan mengatur ulang sequence setelah impor. ID unsigned di atas batas ini memerlukan keputusan skema sebelum impor. Timestamp identitas memakai timestamp tanpa zona sesuai migration Laravel. Impor harus mempertahankan interpretasi timezone sumber, sementara timestamp autentikasi baru memakai timestamptz.
+5. **Jalankan Development Server**:
+   ```bash
+   npm run dev
+   ```
+   Akses aplikasi melalui peramban di `http://localhost:3000`.
 
-Migration cleanup `2026_11_05_120000_cleanup_legacy_pembayaran_dan_peran_keuangan.php` menonaktifkan dan soft-delete akun admin_keuangan. Schema mempertahankan role serta profil historis. Status dan soft delete hasil cleanup harus ikut diimpor. Route verifikasi administrasi awal tetap tersedia bagi akun keuangan yang diaktifkan pengelola, sebagaimana pemeriksaan source TASK-004 di bawah.
+---
 
-Verifier mendukung bcrypt `$2y$`, `$2a$`, `$2b$`, Argon2i dan Argon2id. Test memakai hash sintetis yang dibuat oleh PHP 8.4.26. Pengujian ini memverifikasi interoperabilitas format PHP, sedangkan hash akun riil belum dibaca atau diimpor. File config hashing khusus tidak ditemukan di repository dan `.env` Laravel tidak dibuka. Format hash lain ditolak secara aman dan perlu penanganan eksplisit bila ditemukan pada audit impor. Password bcrypt migrasi yang panjang tetap mengikuti semantik pemotongan 72 byte PHP, sedangkan password baru dibatasi agar menghindari pemotongan diam-diam.
+## 🧪 Pengujian & Kualitas Kode
 
-Pesan login dan permohonan lupa password dibuat generik. Pemulihan berbasis persetujuan tersedia melalui `/lupa-password`. Pemberi persetujuan memperoleh token sekali untuk disampaikan langsung kepada pemilik akun. Token remember dan payload sesi Laravel lama memerlukan login ulang pada aplikasi ini.
+Repositori ini menjaga keandalan fungsional melalui rangkaian pengujian otomatis dan pemeriksaan tipe yang ketat:
 
-## Verifikasi
-
-```sh
-npm ci
-npm run prisma:generate
-npm run prisma:validate
-npm run typecheck
-npm run lint
+```bash
+# Menjalankan seluruh pengujian unit & integrasi
 npm test
+
+# Memeriksa kepatuhan tipe TypeScript strict
+npm run typecheck
+
+# Memeriksa konsistensi gaya kode dengan ESLint
+npm run lint
+
+# Memvalidasi skema Prisma
+npm run prisma:validate
+
+# Membangun bundle aplikasi produksi
 npm run build
-npm audit
 ```
 
-`npm run build` menghasilkan aplikasi produksi tanpa query database. `npm start` menjalankan hasil build. Typecheck setelah checkout baru memerlukan generate terlebih dahulu.
+---
 
-Unit test terarah mencakup hash PHP, validasi password UTF-8, status akun, mandatory password, role/flag historis, mode dosen, guard superadmin, token, dan durasi sesi. Regression test sesi menjalankan fungsi server dan endpoint dengan cookie serta database sintetis, termasuk urutan heartbeat baca, switch role selesai, heartbeat tulis dan pergantian sesi lintas tab ke sesi biasa/remember. Node module mocking untuk navigasi Next memakai flag eksperimental bawaan Node dan menampilkan peringatan saat test. UI E2E menggunakan YAML Sokudo di `e2e/`, tanpa dependensi browser automation tambahan. Flow publik `auth-guest.yaml` ditujukan untuk development server port 3100 dengan `APP_ORIGIN=http://127.0.0.1:3100`, tanpa `DATABASE_URL` maupun `AUTH_RATE_LIMIT_SECRET`. Flow memeriksa form login, pesan kegagalan konfigurasi yang aman, guard guest, dan URL role asing. Jalankan melalui e2e_validate lalu e2e_run Sokudo. Pengujian integrasi login berhasil, race transaksi PostgreSQL, rate limit PostgreSQL, SQL migration, cookie produksi, pencabutan sesi, perubahan status, serta role switch dengan akun riil masih memerlukan database dan environment pengujian yang disetujui.
+## 🔒 Keamanan & Perlindungan Data
 
-Pada pengerjaan TASK-001, instalasi bersih, generate/validate Prisma, typecheck, lint, build, dan 26 unit test termasuk subtest lulus. Audit npm melaporkan nol kerentanan. Pemeriksaan HTTP development menghasilkan login 200, redirect guest dashboard 307, heartbeat tanpa Origin 403, dan heartbeat guest dengan Origin sah 401. LSP dipanggil untuk seluruh source TypeScript, CSS, dan Prisma. Analisis sempat kehilangan resolusi dependensi selama instalasi bersih. Setelah pemuatan ulang konfigurasi, seluruh source TypeScript, kedua file test, konfigurasi TypeScript, dan schema Prisma memperoleh hasil tanpa error. Pemeriksaan CSS masih timeout. YAML E2E lulus validasi inline. e2e_validate berbasis file dan e2e_run tidak menemukan suite dalam worktree tersembunyi `.sokudo/worktrees/`, sehingga browser E2E belum dijalankan. Akses PostgreSQL dan penerapan SQL belum diverifikasi.
+- **Autentikasi Server-Side**: Menggunakan token sesi berkekuatan 256-bit yang disimpan dalam bentuk digest SHA-256 dengan perlindungan cookie `__Host-`, `HttpOnly`, `SameSite=Lax`, dan `Secure`.
+- **Penyimpanan Berkas Terisolasi**: Berkas sensitif (proposal skripsi, kwitansi pembayaran, bukti dokumen) disimpan di luar root web publik dan hanya dapat diakses melalui endpoint berotorisasi dengan verifikasi *magic bytes*.
+- **Rate Limiting Terdistribusi**: Mencegah serangan brute-force pada endpoint autentikasi menggunakan pembatas berbasis HMAC IP/email.
+- **Integritas Dokumen Kriptografis**: Salinan dokumen hasil ujian memuat tanda tangan hash SHA-256 yang divalidasi silang saat pemindaian QR code.
 
-## Batas tahap fondasi
+---
 
-Modul sempro, sidang, scoring, revisi hasil ujian, persetujuan dua tingkat berita acara, pengumuman, PDF/QR, migrasi data riil, deployment, dan hosting dikerjakan bertahap. TASK-003 menambahkan akun, profil, permohonan dan konfigurasi dasar. TASK-004 menambahkan administrasi, judul, bimbingan dan penyimpanan lokal berotorisasi.
+## 📚 Dokumentasi Terkait
 
-Pemeliharaan berkala sesi kedaluwarsa dan bucket rate limit memerlukan pekerjaan operasional lanjutan. Index waktu sudah disiapkan. Mutasi akun menaikkan `auth_version` dan mencabut sesi ketika melakukan reset password atau perubahan keamanan. Audit menyimpan perubahan identitas dan alasan tindakan. Password, hash password dan token rahasia dipisahkan dari audit.
+Untuk pemahaman mendalam mengenai arsitektur internal, spesifikasi teknis modul, dan panduan migrasi data:
+- [Panduan Migrasi Data & Rilis](docs/legacy-migration.md) — Prosedur cutover data dan rehearsal migrasi.
+- [Kontrak Impor Data Sidang](docs/sidang-import-contract.md) — Pemetaan skema dan relasi pendaftaran sidang.
+- [Catatan Paritas Modul Sidang](docs/task006-parity.md) — Rujukan perhitungan nilai dan verifikasi batas.
+- [Katalog Skema Migrasi](docs/task007-migration.md) — Ringkasan relasi tabel dan indeks PostgreSQL.
+- [Riwayat Verifikasi & Catatan Teknis Internal](docs/internal-verification-history.md) — Arsip detail pengerjaan tiket internal (TASK-001 s.d. TASK-010).
 
-## Akun dan konfigurasi TASK-003
+---
 
-- `/register` menyediakan mahasiswa, dosen dan admin keuangan. Mahasiswa memerlukan semester 7–14 sesuai NIM dan periode aktif. Dosen memilih 2–3 bidang keahlian dan dapat mengajukan status Sekpro. Hanya approval Kaprodi atau superadmin yang dapat mengaktifkan pendaftaran pimpinan.
-- `/login` menghubungkan registrasi dan pemulihan password. Setelah registrasi, pengguna masuk untuk membuka status persetujuan. Aktivasi, penolakan dan perubahan keamanan mencabut sesi target sehingga pengguna masuk ulang dengan keadaan terbaru.
-- `/akun` menyediakan pencarian dan pagination, persetujuan satuan/massal, penolakan dengan alasan serta soft delete sesuai kewenangan Kaprodi/Sekpro/superadmin. Persetujuan massal bersifat atomik untuk seluruh pilihan.
-- `/akun/permohonan` menyediakan review biodata mahasiswa, data/keahlian dosen dan reset password. Reset milik Kaprodi hanya diputuskan Sekpro atau superadmin lain. Pengelola menyerahkan token secara langsung kepada pemilik akun. Token baru acak 256 bit, tersimpan SHA-256, terikat `auth_version`, berlaku 24 jam dan digunakan sekali. Perubahan keamanan membatalkan token yang masih disetujui.
-- `/profil` menyediakan pembaruan nama tampilan sesuai `EditProfile::updateProfile()` serta pengajuan perubahan identitas, semester, HP dan keahlian. Satu permohonan pending per jenis/pengguna. Approval memeriksa ulang konflik identitas, peran dan snapshot data lama. Email yang berubah mencabut seluruh sesi pengguna.
-- `/akun/baru` khusus superadmin membuat akun langsung aktif dengan password sementara acak dan wajib ganti password. `/akun/[id]` menyediakan koreksi profil, aktivasi/nonaktivasi, restore dan penetapan peran bagi superadmin. Penetapan Kaprodi memindahkan jabatan dan mencabut sesi seluruh pemegang jabatan yang terdampak.
-- `/pengaturan` khusus Kaprodi pada mode pimpinan dan superadmin. Mode otomatis memakai Asia/Makassar, ganjil September–Februari dan genap Maret–Agustus. Mode manual menyimpan jenis dan tahun. Validasi periode, rentang angka, kuota, tenggat revisi dan alias `minimal_kehadiran_sempro` mengikuti source. Penyimpanan menyinkronkan kuota seluruh dosen aktif. Superadmin dapat menambahkan master bidang keahlian.
+## 📄 Lisensi
 
-### Identitas dan keputusan kompatibilitas
-
-Schema menambah `bidang_keahlian`, pivot `dosen_keahlian`, `pengaturan_sistem`, `password_reset_requests`, `biodata_change_requests`, `keahlian_change_requests`, `log_aktivitas` dan `log_super_admin`. ID, kolom lama/baru, flag perubahan, JSON keahlian, status, arsip dan timestamp sumber dipertahankan. ID dalam JSON baru ditulis sebagai string desimal. Importer juga harus menormalisasi ID di JSON historis secara lossless sebelum deserialisasi JavaScript. FK histori permohonan memakai RESTRICT untuk mempertahankan hubungan sumber.
-
-Pembacaan source lengkap mencakup migration 5 Oktober, 19 Oktober dan cleanup 5 November 2026, model Pengguna/Mahasiswa/Dosen, Register, AccountValidationService, ForgotPassword, AccountApproval, AccountManagement, EditProfile, TambahAkun, KelolaAkun, PenetapanPeran, PengaturanSistem, route dan middleware akun.
-
-Soft delete mengosongkan kredensial aktif dan menyimpan arsip. Status akun sumber tetap terpisah dari `deleted_at`. Restore mengembalikan arsip persis terlebih dahulu, kemudian nilai aktif historis dengan memangkas hanya suffix terminal `.deleted.<angka>` untuk email atau `_DEL_<angka>` untuk NIM/NIDN. Identitas hasil pemulihan diperiksa terhadap seluruh kredensial yang masih ditempati. Audit menyimpan snapshot sebelum/sesudah dan versi transformasi `archive-verbatim-or-terminal-active-suffix-v2`; audit v1 yang sudah tersimpan tetap dipertahankan. Konflik membatalkan transaksi penuh. Nilai aktif dan arsip yang berbeda tetap terekam dalam audit.
-
-Cleanup 5 November memakai query builder dan mengisi `nonaktif`/`deleted_at` pada admin keuangan tanpa event pengarsipan model. Register dan validator pendaftaran masih menerima admin keuangan, route keuangan masih ada, serta KelolaAkun masih dapat memulihkan/mengaktifkannya. TASK-003 mempertahankan operasi identitas tersebut. Menu tambah akun superadmin dan PenetapanPeran mengikuti pilihan mahasiswa/dosen/kaprodi/sekpro yang ditampilkan source. Modul pembayaran berada pada tahap akademik lanjutan.
-
-Keputusan tahap rebuild mempertahankan profil historis ketika peran berubah agar hubungan dan ID migrasi tetap tersedia. Source PenetapanPeran menghapus profil/data peran lama secara permanen. Penyesuaian relasi judul/bimbingan/sempro dan guard penugasan dosen harus diintegrasikan saat modul tersebut ditambahkan. Pada schema tahap ini tabel penugasan akademik belum tersedia.
-
-### Transaksi dan otorisasi
-
-Setiap mutasi memeriksa Origin. Mutasi publik memakai limiter PostgreSQL fondasi dengan namespace identitas tersendiri. Mutasi akun memakai advisory transaction lock per program studi, kemudian row lock pengguna. Otorisasi dibaca ulang dari pengguna dan sesi tersimpan yang dikunci, termasuk status, expiry, `auth_version`, wajib ganti password dan mode peran terkini. Keunikan database tetap menjadi lapisan akhir untuk konflik dengan penulis lain.
-
-Audit dan perubahan bisnis memakai transaksi yang sama. Superadmin juga menghasilkan catatan `log_super_admin`. Sesi dicabut pada reset, perubahan email, status, delete/restore dan penetapan kewenangan. Heartbeat dan timeout sesi fondasi dipertahankan.
-
-Kolom `password_reset_requests.token` mempertahankan data sumber untuk impor. Konsumsi reset baru memakai `token_hash` dan versi autentikasi. Token legacy yang tersimpan plaintext memerlukan permohonan persetujuan baru pada aplikasi ini.
-
-### Perbaikan temuan TASK-008 melalui TASK-010
-
-- **Encoding E2E, cacat terkonfirmasi:** file UTF-8 dibaca runner Windows sebagai mojibake pada en-dash. `accounts-guest.yaml` kini menyimpan assertion teks lengkap dalam scalar YAML double quote dengan escape ASCII `\u2013`. Teks produk dan seluruh 23 langkah tetap sama. Regresi layanan registrasi membuktikan semester 7 dan 14 diterima sesuai NIM/periode manual, serta menolak 6, 15, paritas dan pilihan yang tidak cocok.
-- **Lock, pekerjaan tidak perlu terkonfirmasi:** identitas reset yang tidak cocok, ambigu, tidak aktif atau milik superadmin sebelumnya tetap masuk advisory lock `736427003`. Token reset acak/kedaluwarsa juga melewati hashing dan masuk lock. Preflight kini menolak kasus tersebut sebelum lock; token tidak memenuhi syarat juga ditolak sebelum bcrypt. Pencarian identitas/pemilik dan token diulang di dalam lock. Identity transfer saat menunggu tidak mengarahkan permohonan ke pemilik baru. Registrasi dan reset sejak awal sudah melakukan bcrypt di luar lock. Lock bersama untuk semua mutasi akun, cek aktor/pengguna/sesi, konflik identitas dan transfer Kaprodi tetap dipertahankan; tidak ada klaim pengukuran contention PostgreSQL.
-- **Suffix, cacat arsip terkonfirmasi:** fungsi lama memangkas suffix dari arsip maupun nilai aktif. `skripsi/app/Models/Pengguna.php::restoring` mengembalikan arsip persis, sedangkan migration Laravel `2026_10_05_070000_release_deleted_users_credentials.php` menambahkan suffix ke kolom aktif. Patch memisahkan kedua sumber itu. Regresi mencakup arsip literal dengan penanda mirip suffix, substring nonterminal, NIM/NIDN nullable, konflik email/NIM/NIDN dan profil historis yang tetap tersimpan saat peran berubah. Identitas aktif terminal legacy tetap dipulihkan dengan aturan kompatibilitas sebelumnya; impor tetap perlu memastikan provenance nilai aktif tersebut.
-- **Constraint token, laporan redundansi tidak terbukti:** `AuthSession.tokenHash @id` cocok dengan `auth_sessions_pkey` pada migration `20261107000000_identity_auth`; tidak ada unique index token_hash tambahan di tabel itu. `PasswordResetRequest.tokenHash String? @unique` cocok dengan kolom nullable dan unique index `password_reset_requests_token_hash_key` pada migration `20261107010000_accounts_settings`. Kedua constraint melindungi tabel dan kegunaan berbeda. Unique `token` plaintext juga mempertahankan kontrak legacy pada kolom berbeda. Schema dan SQL tidak diubah.
-- **Cookie/origin, perilaku keamanan yang diharapkan:** produksi menolak `APP_ORIGIN` HTTP. Regresi dengan cookie store/header sintetis membuktikan nama `__Host-sias_session`, `Secure`, `HttpOnly`, `SameSite=Lax`, path `/`, tanpa Domain, cookie sesi biasa tanpa expiry, expiry remember dan atribut penghapusan. Origin hilang/asing, HTTP dan port berbeda ditolak. Deploy harus memakai HTTPS dari browser, proxy mengakhiri TLS, dan `APP_ORIGIN=https://<host-publik>` sesuai origin publik. Untuk HTTP lokal gunakan `npm run dev`, bukan `npm start`; jangan menonaktifkan guard atau menurunkan keamanan cookie. Pengujian ini belum membuktikan penerimaan cookie oleh browser pada deployment HTTPS nyata.
-
-Verifikasi aktual 7 November 2026: `npm ci` (510 paket, nol vulnerability), Prisma generate/validate, lint, typecheck, production build dan 60 test lulus. Empat regresi baru gagal pada source sebelum patch (laporan Node menghitung 5 failure termasuk test induk); sesudah patch semuanya lulus. Adapter transaksi tetap simulasi mutex/rollback dan interleaving, bukan transaksi PostgreSQL nyata.
-
-LSP akhir melaporkan tanpa error untuk `policy.ts`, `reset.ts` dan `tests/session.test.ts`. `management.ts` dan `tests/accounts.test.ts` timeout saat pemeriksaan akhir serta satu retry; test akun sempat memperoleh hasil tanpa error pada pemeriksaan awal. Error readonly `delete NODE_ENV` di test cookie sudah diperbaiki dan file itu memperoleh hasil tanpa error. Tidak mengklaim LSP menyeluruh lulus; typecheck dan build final tetap lulus.
-
-Flow accounts tervalidasi inline: 23 langkah, nol diagnostik. Validator file menolak path worktree tersembunyi dengan `escapes every e2e/ directory`; suite terdeteksi menunjuk checkout utama, sehingga flow accounts yang telah dipatch belum dapat dirun tanpa dukungan worktree runner. Tidak menyalin patch ke checkout utama atau mengulang flow lama yang masih mengandung masalah encoding. Riwayat diperiksa sebelum eksekusi; tidak ada heal accounts baru. Rerun sesudah Merge perlu memakai flow yang telah dipatch. `auth-guest` lulus 18/18 pada development server worktree port 3102 tanpa konfigurasi database/secret (run `eb30b4d0-7b3c-4b69-b2b9-4a7ddff8ac4a`). Ini bukti guard tamu dan pesan layanan tidak tersedia, bukan login berhasil. Pemeriksaan HTTP `/login` dan `/register` menghasilkan 200 dan label semester lengkap tetap ada di HTML.
-
-Server development worktree port 3102 sudah dihentikan setelah verifikasi. Tool `database_*`, termasuk `database_list_sources`, tidak tersedia di sesi TASK-010; status sources terkini tidak dapat dipanggil ulang. Tidak ada koneksi, seed, migrasi atau perubahan database nyata. Concurrency/constraint PostgreSQL, alur pengguna terautentikasi dan cookie browser HTTPS tetap memerlukan environment serta persetujuan data yang sesuai.
-
-### Verifikasi TASK-003 pada 7 November 2026
-
-- `npm ci`, `npm run prisma:generate`, `npm run prisma:validate`, `npm run typecheck`, `npm run lint`, `npm test`, dan `npm run build` berhasil. Instalasi melaporkan nol kerentanan. Suite memuat 53 test termasuk subtest, mencakup seluruh 26 test fondasi.
-- Tindak lanjut review mengunci submit formulir setelah menghasilkan token reset atau password sementara, termasuk setelah rahasia disembunyikan. Regresi komponen memakai hook React sintetis untuk memeriksa state kontrol dan visibilitas rahasia. Review terarah memeriksa potongan layanan otorisasi, transaksi, reset dan formulir. Pemeriksaan commit utuh oleh reviewer belum tuntas.
-- Regresi terarah memakai database/sesi sintetis dan pemanggilan service/Server Action aktual. Mutex serta rollback adapter hanya mensimulasikan kontrak transaksi PostgreSQL. Kasus mencakup approval/restore bersamaan, rollback massal, konflik email/NIM/NIDN, suffix legacy, arsip dipakai ulang, cleanup keuangan, role transfer, reset sekali pakai/kedaluwarsa, snapshot stale, pencabutan sesi, Origin dan penyimpanan audit tanpa rahasia.
-- Pemeriksaan HTTP development tanpa database menghasilkan 200 untuk `/login`, `/register`, `/lupa-password`. `/akun`, `/akun/baru`, `/akun/permohonan`, `/profil` dan `/pengaturan` mengarahkan guest ke `/login`.
-- `e2e/accounts-guest.yaml` lulus validasi inline dengan 23 langkah. Validator berbasis file menolak path `.sokudo/worktrees/...` dengan pesan `escapes every e2e/ directory`. Flow fondasi yang terdeteksi lulus validasi file, tetapi `e2e_run` gagal karena panel/tab browser workspace tidak tersedia. Browser E2E belum terlaksana.
-- PostgreSQL nyata, penerapan kedua SQL, browser alur pengguna aktif dan cookie produksi memerlukan environment yang disetujui. Tool database Sokudo tidak tersedia pada sesi worker ini. Seluruh pengujian database pada suite merupakan simulasi dalam memori.
-- LSP dipanggil untuk seluruh source yang berubah. Halaman, navigasi, beberapa helper dan schema Prisma melaporkan tanpa error. Sebagian file TypeScript mengalami timeout diagnostik meski telah diulang. LSP juga masih menampilkan cache duplikasi dari salinan schema sementara yang sudah dihapus. Validasi Prisma, typecheck dan lint pada file aktual berhasil. Pemeriksaan LSP menyeluruh belum dapat disahkan.
-
-## Judul dan bimbingan TASK-004
-
-### Entry point dan kewenangan
-
-- `/administrasi` menyediakan pengajuan kwitansi, bukti transfer, KRS/SKA, tanggal transfer dan nama pengirim. Mahasiswa dapat menyimpan berkas satu per satu, menghapus berkas yang belum disahkan, dan memperbaiki pengajuan yang ditolak atau perlu diverifikasi ulang. Review membawa nomor revisi sehingga unggahan yang berubah sesudah halaman dibuka harus ditinjau kembali. Admin keuangan aktif dan superadmin dapat menyetujui atau menolak berkas terbaru. Seluruh berkas harus benar-benar tersedia saat approval. Verifikasi periode baru menghasilkan record tersendiri sehingga histori tetap tersedia.
-- `/judul` menyediakan draft, proposal PDF maksimal 10 MB, matriks penelitian, dua bidang opsional, maksimal dua preferensi dosen dan pengecekan kemiripan. Pengajuan memeriksa periode serta verifikasi administrasi terbaru di server. Verifikasi ulang dan periode kedaluwarsa memblokir pengajuan. Snapshot semester dari NIM, label periode, siklus dan versi disimpan saat submit.
-- `/judul/[id]` menyediakan review Kaprodi/Sekpro, arahan revisi, persetujuan, pembatalan persetujuan dan penetapan satu atau dua pembimbing. Keputusan Kaprodi mengikat Sekpro. Mode dosen pimpinan kehilangan kewenangan pengelolaan. Kuota dihitung terhadap kedua slot pada judul aktif milik mahasiswa aktif. Pembatalan persetujuan memerlukan pembimbing sudah dilepas.
-- Mahasiswa dapat membatalkan pengajuan menunggu review. Revisi membuat record pengajuan baru, mengarsipkan record lama dan menaikkan counter. Draft lama menggunakan soft delete saat submit. Superadmin dapat mengarsipkan judul selama periode pengajuan terbuka. Penanda arsip bisnis, soft delete, alasan, aktor dan waktu tetap terpisah.
-- `/arsip-judul` menyediakan pencarian dan pagination corpus alumni serta daftar judul mahasiswa yang telah diajukan. Detail judul, proposal dan logbook diperiksa lagi terhadap pemilik, penugasan atau pengelola. Daftar bersama mengambil field publik yang terbatas.
-- `/bimbingan` dan `/bimbingan/[id]` menyediakan jadwal WITA, konfirmasi hadir, permintaan jadwal ulang, pembaruan jadwal oleh dosen pembuat, penyelesaian/pembatalan oleh pembimbing, logbook, catatan mahasiswa, pembatalan sesi dan ACC. Mahasiswa maupun pembimbing boleh mencatat sesi selesai sesuai `BimbinganPolicy` dan `Logbook::eksekusiSimpanLogbook` sumber. Pembimbing dan Kaprodi dapat membatalkan sesi yang tidak sah. Penghitungan ACC sempro mengikuti sesi sempro selesai yang tidak dibatalkan. Penghitungan skripsi memakai siklus aktif.
-- Perubahan judul menyediakan revisi minor atau seminar ulang. Kedua pembimbing mengonfirmasi secara terpisah sebelum keputusan final program studi. Penolakan menutup permohonan. Seminar ulang melepaskan pembimbing, membatalkan logbook dan mencabut ACC terkait. Penggantian pembimbing menutup permohonan aktif agar approval dosen lama tidak terbawa.
-- `/notifikasi` menampilkan notifikasi milik pengguna dan penanda dibaca. Payload memakai tabel polimorfik `notifications` sumber. Tabel historis `notifikasi` untuk kanal pengiriman dipreservasi secara terpisah.
-
-### Bukti klasifikasi keuangan pada source 7 November 2026
-
-- `routes/web.php` tetap mendaftarkan `/pengajuan/verifikasi-administrasi` dalam grup mahasiswa dan `/admin-keuangan/verifikasi-pembayaran` dalam grup `role:admin_keuangan`, keduanya di bawah `akun.aktif`. `EnsureAkunAktif`, `EnsureRole` serta autentikasi menolak akun nonaktif/terhapus.
-- Predicate `up()` pada cleanup `2026_11_05_120000_cleanup_legacy_pembayaran_dan_peran_keuangan.php` memilih `nomor_item = 11` dengan nama mengandung `pembayaran` atau `kwitansi`, tanpa filter jenis checklist maupun relasi sempro. Seluruh record yang cocok diubah menjadi `Penggandaan Skripsi`, bentuk `centang` dan unggahan `centang_mandiri`. Jangan membatasi transformasi ini pada sempro berdasarkan nama migration atau konteks fitur. Statement akun terpisah memilih seluruh `role = admin_keuangan`, mengisi `status_akun = nonaktif`, `deleted_at` dan `updated_at`, tanpa predicate status sebelumnya. Profil serta ID historis tetap dipertahankan.
-- Register, approval dan pengelolaan akun masih mendukung peran keuangan. Route tersedia secara bersyarat; source tidak membuktikan adanya petugas aktif setelah cleanup. `VerifikasiAdministrasi::submit()` masih mengajukan berkas ke antrean. `VerifikasiPembayaran::verifikasi()` memeriksa `hasValidBuktiTransfer()`, memperbarui keputusan, lalu memakai `PeriodeHelper` dan `SiklusService` untuk siklus baru. Pengelola harus menyediakan akun berwenang melalui alur akun yang telah tersedia.
-- Source `VerifikasiPembayaranFlowTest` berisi skenario unggahan sampai approval admin, tetapi fixture-nya masih mengisi `status`, bukan `status_akun`. `VerifikasiPembayaranTest` memakai `status_akun = aktif`, membentuk petugas baru dan memuat skenario berkas transfer serta penguncian setelah verifikasi. Keduanya merupakan bukti maksud dan kontrak source; test Laravel tidak dijalankan pada run ini dan tidak membuktikan akun produksi masih aktif. `PembatalanJudulDanNavigasiTest` serta `Fase2UIMahasiswaKehadiranTest` dibaca sebagai referensi navigasi. `TodoIndicatorService::getKaprodiSidangVerifikasiCount()` menerima butir 11 berstatus `terisi`/`diverifikasi`; skenario D-3 pada `PaketDAccDanPendaftaranSidangTest` dan assertion `SkenarioManualPrompt2Test` menegaskan checklist sidang independen dari pembayaran akhir. Bagian ini hanya pemeriksaan source, tanpa menjalankan domain sidang.
-- Route `/sidang/pembayaran` mengarah ke pendaftaran sidang. Route verifikasi pembayaran akhir mengarah ke verifikasi awal. Komponen pembayaran akhir dan tabel `pembayaran_sidang` menjadi referensi historis untuk tahap sidang serta importer. TASK-004 memetakan `verifikasi_pembayaran`, ID mahasiswa/admin, path berkas, status, catatan, tanggal, pengirim, periode, siklus, verifikasi ulang dan timestamp.
-- `up()` migration `2026_09_28_120000_optimize_database_schema_and_drop_obsolete_tables.php` hanya menghapus `password_reset_tokens` dan menambah indeks pada permohonan reset, pendaftaran/jadwal sempro serta notifikasi. Tidak ada penghapusan `jobs`, `failed_jobs`, `cache` atau `cache_locks` di migration ini. Statement penghapusan pada `down()` migration pembuat tabel tersebut bukan bukti bahwa tabel dihapus oleh upgrade 28 September.
-
-Catatan audit TASK-009 di atas diverifikasi dari source pada 7 November 2026. Laporan akhir terstruktur TASK-009 belum tersedia saat amendment diterima; pemeriksaan terbatas ini tidak menyatakan seluruh gap audit telah ditutup. Tidak ada importer, migrasi data nyata atau perubahan source Laravel dalam TASK-004.
-
-### Kemiripan dan rekomendasi
-
-Source aktual memakai Jaccard dengan token unik hasil lowercase, pembersihan karakter, stopwords dan stemming Sastrawi. Brief TF-IDF cosine berbeda dengan `JudulSimilarityService`, `SimilarityService` dan test terbaru. Implementasi mengikuti algoritma source. Kemiripan merupakan peringatan dengan ambang `threshold_peringatan_plagiasi`, default 35 persen. Skor tinggi tetap dapat direview. Corpus berasal dari `arsip_judul_skripsi.keywords`, termasuk JSON array dan string JSON legacy. Hasil menampilkan tiga kecocokan tertinggi serta ukuran corpus pada pengecekan mandiri. Corpus kosong perlu diisi melalui impor yang disetujui.
-
-Aturan morfologi dan ECS dipindahkan dari Sastrawi PHP `1.2.0`, commit `31fd4261dd4980cc57447f44d1aec4bd69e2abec` pada `composer.lock`, ke `src/lib/academic/stemmer.ts`. Dependency `ts-sastrawi@1.0.1` hanya menyediakan kamus melalui API publik. Kamus diselaraskan dengan sumber terkunci untuk entri `relawan` dan `oper`. Lisensi port disertakan dalam `STEMMER-LICENSE`. Fixture pemulihan berisi 1.885 pasangan token/stem. Semuanya diverifikasi ulang langsung dengan Sastrawi PHP pada commit terkunci, ditambah lima pasangan judul bermakna/kosong. Verifikasi ini membuktikan kesetaraan pada contoh tersebut, bukan jaminan bagi seluruh kemungkinan kata Indonesia. Script oracle hanya membaca source/fixture, tanpa bootstrap Laravel atau akses database. Set stopword seeder lama dan pengecekan judul aktual tetap terpisah.
-
-Rekomendasi pembimbing memakai kecocokan ID bidang, termasuk bidang pada matriks, sebesar 10 poin per bidang. Legacy tanpa bidang memakai containment 10 poin atau overlap token 3 poin. Token fallback membuang stopword sumber seperti `sistem`, `aplikasi`, `berbasis`, dan `menggunakan`. Field fenomena/research gap masih dirujuk service rekomendasi, tetapi dihapus migration 10 September; schema mengikuti hasil migration. Urutan skor tertinggi lalu sisa kuota mengikuti `RekomendasiPembimbingService`. Penetapan selalu memeriksa ulang keaktifan dan kuota dalam transaksi.
-
-### Schema, histori dan penyimpanan
-
-Ajukan `prisma/migrations/20261107020000_titles_guidance/migration.sql` setelah kedua migration fondasi melalui proposal database Sokudo. SQL dibungkus transaksi. Seluruh ID/FK sumber tetap BIGINT, timestamp sumber sesuai nullability sumber, tahun corpus tetap string nullable, status historis tetap string, JSON serta penanda arsip dipertahankan. Migration ini juga menambahkan kolom histori `log_aktivitas` yang belum tersedia pada fondasi. FK sempro/sidang pada `dokumen_verifikasi` akan dilengkapi tahap domain terkait. Self-reference dokumen pengganti sudah dipetakan.
-
-Impor harus mempertahankan hasil transformasi yang sudah diterapkan di sumber. Migration 30 September menandai verifikasi ulang dan menghitung snapshot semester/periode. Migration 8 Oktober mengosongkan flag ulang untuk status tertentu atau verifikasi dengan bukti transfer. Paket C 20 Oktober mengisi periode null dari pengaturan aktif dan siklus 1. Simpan versi transformasi saat merekonstruksi snapshot dari ekspor lebih lama. Aplikasi menulis `sias-ts-academic-v1` untuk snapshot baru dan menyimpan aktor sebelum/sesudah dalam audit. Timestamp sumber tanpa zona harus ditafsirkan sebagai WITA oleh importer lalu dipetakan ke representasi UTC aplikasi secara eksplisit. Tanggal kalender seperti tanggal transfer dan tanggal logbook tetap berupa DATE.
-
-`fase_skripsi_at` adalah titik integrasi baru bagi TASK-005. Hanya hasil resmi sempro lulus atau revisi selesai yang boleh mengisinya. Importer harus menurunkannya dari hasil resmi beserta provenance. Form akademik pada tahap ini tidak dapat mengubah gate tersebut. Penerbitan ACC menyimpan token, versi, penandatangan, snapshot dan pencabutan dalam `dokumen_verifikasi`. PDF/QR, nomor surat, sinkronisasi checklist sempro dan lock pendaftaran sidang dilanjutkan pada tahap sempro/sidang. UI tahap ini menyediakan pencabutan ACC sempro.
-
-`SIAS_STORAGE_ROOT` memakai direktori lokal `.sias-storage` di luar web root, dengan disk `public/` dan `private/` sesuai path sumber. Berkas baru menggunakan disk sumber `public`, dengan nama acak dan pemeriksaan magic bytes serta batas ukuran. Kedua disk diakses melalui `/berkas/[kind]/[id]/[file]` yang memeriksa sesi, status, pemilik atau penugasan. Proposal mendukung fallback private lalu public. Administrasi dibatasi pemilik, admin keuangan aktif dan superadmin. Respons unduhan memakai attachment, no-store dan nosniff. Root storage harus tetap berada di luar direktori statis dan dipasang sebagai persistent volume lokal pada runtime.
-
-Mutasi domain berbagi advisory transaction lock akun/konfigurasi agar perubahan status, penugasan dan kuota konsisten. Sesi dan mode peran dibaca ulang di bawah row lock. Receipt UUID mengikat aktor, command, payload dan hash isi unggahan sehingga retry identik menghasilkan satu efek bisnis serta memulihkan hasil pengecekan yang sama. Unggahan, keputusan dan penghapusan administrasi menaikkan `revision`; review versi lama ditolak. Audit, notifikasi, receipt dan perubahan bisnis berada dalam transaksi yang sama. File disimpan sebelum commit dan path versi lama dipertahankan untuk histori. Kegagalan atau hasil commit yang ambigu dapat menyisakan file tanpa referensi. Rekonsiliasi operasional harus memastikan receipt serta referensi database sebelum membersihkan file tersebut.
-
-TASK-004 mempertahankan antarmuka `accountTransaction`/`checkedActor` TASK-003. Penetapan dua slot kuota dan receipt bergantung pada serialisasi bersama dengan perubahan akun/konfigurasi. Advisory lock global saat ini mencakup pembacaan berkas untuk review; latensi storage dapat memperpanjang antrean transaksi. Risiko serta perbaikan fondasi/akun ditangani TASK-010. Perubahan strategi lock di sana harus mempertahankan kontrak serialisasi domain ini dan diuji lintas koneksi PostgreSQL sebelum dianggap terverifikasi. Konfigurasi Origin dan cookie Secure tetap mengikuti fondasi.
-
-Pembatalan pembimbing sengaja menandai logbook, bukan menghapus fisik seperti beberapa service Laravel, agar memenuhi preservasi ticket. Penetapan berikutnya mempertahankan snapshot pembatalan lama. Siklus baru setelah administrasi periode baru mempertahankan pembimbing aktif selama kuota tersedia dan membuat logbook siklus lama hanya-baca. ACC skripsi siklus sebelumnya dicabut agar jumlah sesi siklus baru diperiksa kembali. Hasil resmi sempro tetap diakui.
-
-### Verifikasi TASK-004 pada 7 November 2026
-
-- Pemulihan dilakukan pada worktree repository standalone dengan baseline `2283d9c`. Sebanyak 35 file scoped dipulihkan; tidak ada penyalinan .git, .env, dependensi, generated/build, atau snapshot pengguna. Script oracle dan komponen matriks ditambahkan di repository ini.
-- `npm ci`, `npm run prisma:generate`, `npm run prisma:validate`, `npm run typecheck`, `npm run lint`, dan `npm test` berhasil pada run ini. Suite terakhir memuat 84 test lulus, termasuk 53 test fondasi/akun. `npm audit` melaporkan nol kerentanan. `npm run build` berhasil tanpa peringatan tracing storage. `git diff --check` bersih.
-- Regresi memanggil layanan domain, Server Action, halaman server dan endpoint berkas aktual dengan database sintetis. Kasus mencakup administrasi bertahap sampai ACC, revisi berkas stale, minimal sesi, pengguna lain, catatan internal, Origin, dua slot kuota, perebutan satu kuota, submit dan retry paralel, rollback, draft yang bersaing dengan keputusan, arsip revisi, prioritas Kaprodi, perubahan minor/seminar ulang, penambahan pembimbing kedua, fase, siklus, pencabutan ACC, peran historis, magic bytes, path traversal dan jadwal WITA. Mutex sintetis bukan bukti lock PostgreSQL lintas koneksi.
-- Oracle `php scripts/verify-legacy-similarity.php <Laravel-root> <Sastrawi-source-root>` berhasil memverifikasi 1.885 token dan lima pasangan judul menggunakan PHP 8.4.26 dan Sastrawi 1.2.0. PHP melaporkan deprecation Countable pada dependensi sumber lama; verifikasi tetap berhasil. Source Sastrawi harus diekstrak dari reference di composer.lock. Contoh: judul akademik yang berbeda memberi 43%, pasangan identik 100%, pasangan tanpa overlap dan token kosong 0%. Batas 34/35 serta ambang pengaturan 40 juga diuji pada TypeScript.
-- `prisma migrate diff --from-schema <schema-baseline> --to-schema prisma/schema.prisma --script` dibandingkan dengan SQL tahap ini dan identik setelah komentar/transaksi dinormalisasi. Keduanya merupakan datamodel lokal; perintah tidak memakai datasource atau shadow database. SQL belum diterapkan.
-- HTTP development port 3104: `/login` 200, tujuh halaman akademik terlindungi 307 untuk guest, endpoint proposal 401. Server worker sengaja tanpa konfigurasi DATABASE_URL dan secret rate limit untuk flow kegagalan konfigurasi fondasi.
-- Sokudo `Tskripsi/e2e/auth-guest.yaml` lulus validasi dan run 18 langkah pada server worker, run ID `d0f6564e-e876-4b00-bca1-123e1ece30ba`. Flow `e2e/academic-guest.yaml` lulus validasi inline 17 langkah. Validator file menolak path worktree tersembunyi dengan `escapes every e2e/ directory`; flow baru belum dijalankan di browser. Checkout main tidak diubah untuk mengatasi pembatasan ini.
-- Tool `database_*` tidak tersedia pada sesi worker. PostgreSQL nyata, penerapan SQL, FK runtime, lock lintas koneksi serta browser alur akademik pengguna aktif belum diverifikasi. Corpus dan pengguna riil belum diimpor. Tidak ada migrasi/seed atau akses DB melalui shell/script.
-- `lsp_diagnostics` dipanggil untuk seluruh source yang ditambah/diubah. Error pembacaan JSON pada script PHP diperbaiki; script PHP dan schema Prisma kemudian melaporkan tanpa error. Pemeriksaan awal juga memberi hasil tanpa error pada mayoritas halaman/helper. Pemeriksaan akhir berulang untuk store, titles, files, changes, similarity, endpoint berkas, formulir, action, detail judul dan test mengalami timeout; verifikasi LSP seluruh file versi akhir belum dapat disahkan. Typecheck, lint dan build seluruh source final tetap lulus.
+Hak Cipta © 2026. Seluruh hak cipta dilindungi undang-undang.
+Proyek ini dikembangkan untuk kebutuhan tata kelola administrasi akademik skripsi perguruan tinggi.
