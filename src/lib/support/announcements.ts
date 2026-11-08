@@ -5,7 +5,9 @@ import { idSchema } from "@/lib/accounts/validation";
 import { localDateTime } from "@/lib/academic/validation";
 import { requireManager, notify, type Context, type Input, type Uploads } from "@/lib/academic/store";
 import { storePrivateUpload } from "@/lib/academic/files";
-import { announcementVisible } from "@/lib/sidang/policy";
+import { announcementVisible } from "./policy";
+
+export { announcementVisible };
 
 const rolesSchema = z.array(z.enum(["mahasiswa", "dosen", "kaprodi", "sekpro", "admin_keuangan", "superadmin"])).min(1).max(6)
   .refine((values) => new Set(values).size === values.length);

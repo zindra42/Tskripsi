@@ -87,33 +87,12 @@ export const SEMPRO_CHECKLIST_DEFINITIONS: Record<number, SemproChecklistItemDef
 export const PRA_SEMPRO_ITEMS = [0, 1, 5, 6, 7, 8, 9, 10, 12];
 export const SUBMIT_REQUIRED_ITEMS = [0, 1, 6, 7, 8, 9, 10];
 
-export const ROMAN_MONTHS: Record<number, string> = {
-  1: "I",
-  2: "II",
-  3: "III",
-  4: "IV",
-  5: "V",
-  6: "VI",
-  7: "VII",
-  8: "VIII",
-  9: "IX",
-  10: "X",
-  11: "XI",
-  12: "XII",
-};
-
-export function getBulanRomawi(date: Date): string {
-  const month = Number(new Intl.DateTimeFormat("en", { timeZone: "Asia/Makassar", month: "numeric" }).format(date));
-  return ROMAN_MONTHS[month] ?? "I";
-}
-
-export function formatNomorUrut(nomor: number): string {
-  return String(nomor).padStart(3, "0");
-}
-
-export function generateNomorSurat(urut: number, kategori: string, bulanRomawi: string, tahun: number): string {
-  return `${formatNomorUrut(urut)}-${kategori}/UTS/FRS-INF/TA/${bulanRomawi}/${tahun}`;
-}
+export {
+  ROMAN_MONTHS,
+  getBulanRomawi,
+  formatNomorUrut,
+  generateNomorSurat,
+} from "@/lib/documents/numbering";
 
 export function maskNim(nim?: string | null): string {
   if (!nim) return "-";

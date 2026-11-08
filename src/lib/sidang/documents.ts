@@ -2,8 +2,8 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { ensure, jsonValue, audit } from "@/lib/accounts/store";
 import { type Context } from "@/lib/academic/store";
-import { getOrCreateNomorDasar, getOrCreateNomorDokumen } from "@/lib/sempro/documents";
-import { SimplePdfDocument } from "@/lib/sempro/pdf";
+import { getOrCreateNomorDasar, getOrCreateNomorDokumen } from "@/lib/documents/numbering";
+import { SimplePdfDocument } from "@/lib/documents/pdf";
 import { sidangRecord, snapshotBoard, type Sidang } from "./store";
 import { officialResult } from "./policy";
 

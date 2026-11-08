@@ -97,10 +97,4 @@ export function validateSlot(input: unknown, now = new Date()): Slot {
 export function overlap(a: { waktuMulai: string | null; waktuSelesai: string | null }, start: string, end: string) {
   return Boolean(a.waktuMulai && a.waktuSelesai && a.waktuMulai.slice(0, 5) < end && a.waktuSelesai.slice(0, 5) > start);
 }
-export function announcementVisible(row: { status: string; isPublik: boolean; targetPeran: unknown;
-  deletedAt: Date | null; tampilMulai: Date | null; tampilSelesai: Date | null }, role?: string, now = new Date()) {
-  return !row.deletedAt && row.status === "terbit" && (!row.tampilMulai || row.tampilMulai <= now)
-    && (!row.tampilSelesai || row.tampilSelesai >= now)
-    && (row.isPublik || Boolean(role && Array.isArray(row.targetPeran)
-      && (row.targetPeran.includes(role) || role === "sekpro" && row.targetPeran.includes("sekprodi"))));
-}
+export { announcementVisible } from "@/lib/support/policy";

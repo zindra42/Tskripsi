@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { database } from "@/lib/db";
-import { announcementVisible } from "@/lib/sidang/policy";
+import { announcementVisible } from "@/lib/support/policy";
 import { readStoredFile } from "@/lib/academic/files";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {

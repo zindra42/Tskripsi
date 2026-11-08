@@ -1,75 +1,18 @@
 import "server-only";
 import crypto from "node:crypto";
+import { konversiPredikat } from "./policy";
+import { SimplePdfDocument } from "@/lib/documents/pdf";
 import {
-  generateNomorSurat,
-  getBulanRomawi,
-  konversiPredikat,
-} from "./policy";
-import { SimplePdfDocument } from "./pdf";
+  getOrCreateNomorDasar,
+  getOrCreateNomorDokumen,
+} from "@/lib/documents/numbering";
 import type { SemproContext } from "./store";
 import type { Tx } from "@/lib/accounts/store";
 
-export async function getOrCreateNomorDasar(tx: Tx, pengajuanId: bigint) {
-  let nomorDasar = await tx.nomorSuratDasar.findUnique({
-    where: { idPengajuan: pengajuanId },
-  });
-  if (!nomorDasar) {
-    const currentYear = Number(new Intl.DateTimeFormat("en", { timeZone: "Asia/Makassar", year: "numeric" }).format(new Date()));
-    // Imported allocations may be sparse. Counting rows would reuse an existing number.
-    const lastAllocation = await tx.nomorSuratDasar.findFirst({
-      where: { tahun: currentYear }, orderBy: { nomorUrut: "desc" },
-    });
-    const nextUrut = (lastAllocation?.nomorUrut ?? 0) + 1;
-
-    nomorDasar = await tx.nomorSuratDasar.create({
-      data: {
-        idPengajuan: pengajuanId,
-        tahun: currentYear,
-        nomorUrut: nextUrut,
-        tanggalAlokasi: new Date(),
-      },
-    });
-  }
-  return nomorDasar;
-}
-
-export async function getOrCreateNomorDokumen(
-  tx: Tx,
-  nomorDasarId: bigint,
-  kategori: string,
-  tanggalTerbit: Date = new Date(),
-) {
-  let kategoriRecord = await tx.nomorSuratKategori.findUnique({
-    where: {
-      idNomorDasar_kategori: {
-        idNomorDasar: nomorDasarId,
-        kategori,
-      },
-    },
-  });
-
-  if (!kategoriRecord) {
-    const nomorDasar = await tx.nomorSuratDasar.findUniqueOrThrow({
-      where: { id: nomorDasarId },
-    });
-    const romawi = getBulanRomawi(tanggalTerbit);
-    const tahun = Number(new Intl.DateTimeFormat("en", { timeZone: "Asia/Makassar", year: "numeric" }).format(tanggalTerbit));
-    const nomorLengkap = generateNomorSurat(nomorDasar.nomorUrut, kategori, romawi, tahun);
-
-    kategoriRecord = await tx.nomorSuratKategori.create({
-      data: {
-        idNomorDasar: nomorDasar.id,
-        kategori,
-        nomorLengkap,
-        bulanRomawi: romawi,
-        tahun,
-        tanggalTerbit,
-      },
-    });
-  }
-
-  return kategoriRecord;
-}
+export {
+  getOrCreateNomorDasar,
+  getOrCreateNomorDokumen,
+};
 
 export async function terbitkanUndangan(context: SemproContext, jadwalId: bigint) {
   const jadwal = await context.tx.jadwalSempro.findUniqueOrThrow({

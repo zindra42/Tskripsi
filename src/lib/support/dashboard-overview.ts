@@ -6,7 +6,8 @@ import type { AuthenticatedSession } from "@/lib/auth/session";
 import { canManage } from "@/lib/accounts/policy";
 import type { Prisma } from "@/generated/prisma/client";
 import { activeGuidanceWhere } from "@/lib/academic/store";
-import { announcementVisible, revisionComplete, witaToday } from "@/lib/sidang/policy";
+import { revisionComplete, witaToday } from "@/lib/sidang/policy";
+import { announcementVisible } from "@/lib/support/policy";
 
 export async function commonOverview(session: AuthenticatedSession) {
   const db = database(), now = new Date();

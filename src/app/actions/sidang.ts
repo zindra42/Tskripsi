@@ -5,7 +5,7 @@ import { z } from "zod";
 import { hasTrustedOrigin } from "@/lib/auth/origin";
 import { requireSession } from "@/lib/auth/session";
 import { AccountError, ensure } from "@/lib/accounts/store";
-import { academicMutation } from "@/lib/academic/store";
+import { createIdempotentMutation } from "@/lib/db/mutation";
 import { validateUpload, type Upload } from "@/lib/academic/files";
 import { initialize, updateChecklist, submit, verifyChecklist, verifyBatch, returnRegistration } from "@/lib/sidang/registration";
 import { assignExaminers, schedule, confirm, cancelSchedule, requestChange, decideRequest, remind, emergencyAssignment } from "@/lib/sidang/scheduling";
@@ -16,7 +16,24 @@ import { processReminders } from "@/lib/sidang/reminders";
 import { reviewSemproRevision } from "@/lib/support/sempro-revisions";
 import { rollbackAudit } from "@/lib/support/audit-rollback";
 
+export { announcementAction } from "./announcements";
+export { supportAction } from "./support";
+
 export type SidangFormState = { error?: string; success?: string; id?: string };
+
+function getTargetedPaths(command: string): string[] {
+  if (command.startsWith("announcement-")) {
+    return ["/pengumuman", "/pengumuman-publik", "/dashboard"];
+  }
+  if (command === "correction" || command === "audit-rollback") {
+    return ["/audit", "/koreksi-proses", "/dashboard"];
+  }
+  if (command === "sempro-review-revision") {
+    return ["/sempro", "/dashboard"];
+  }
+  return ["/sidang", "/dashboard"];
+}
+
 export async function sidangAction(_state: SidangFormState, form: FormData): Promise<SidangFormState> {
   if (!await hasTrustedOrigin()) return { error: "Permintaan tidak dapat diverifikasi. Muat ulang halaman." };
   const session = await requireSession();
@@ -38,7 +55,7 @@ export async function sidangAction(_state: SidangFormState, form: FormData): Pro
       file = { bytes, extension: "pdf" };
     } else file = await validateUpload(raw);
     const uploads = { file };
-    const result = await academicMutation(session, String(form.get("key")), `sidang:${command}`, input, uploads, async (context) => {
+    const result = await createIdempotentMutation(session, String(form.get("key")), `sidang:${command}`, input, uploads, async (context) => {
       switch (command) {
         case "initialize": return initialize(context);
         case "checklist": return updateChecklist(context, input, uploads);
@@ -72,7 +89,7 @@ export async function sidangAction(_state: SidangFormState, form: FormData): Pro
         default: throw new AccountError("Perintah tidak dikenal.");
       }
     });
-    for (const path of ["/sidang", "/sempro", "/pengumuman", "/pengumuman-publik", "/notifikasi", "/dashboard", "/audit", "/koreksi-proses"]) revalidatePath(path, "layout");
+    for (const path of getTargetedPaths(command)) revalidatePath(path, "layout");
     return { success: result && typeof result === "object" && "message" in result ? String(result.message) : "Perubahan tersimpan.", ...(result && typeof result === "object" && "id" in result ? { id: String(result.id) } : {}) };
   } catch (error) {
     if (error instanceof z.ZodError) return { error: "Periksa data formulir dan lengkapi semua kolom wajib." };
