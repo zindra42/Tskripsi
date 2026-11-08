@@ -102,7 +102,7 @@ export async function accountAction(_state: AccountFormState, form: FormData): P
         await changeAccountStatus(session, idSchema.parse(form.get("id")), command, reason, confirmation);
         break;
       case "role":
-        await assignRole(session, idSchema.parse(form.get("id")), { role: form.get("role"), identifier: form.get("identifier") || undefined }, reason, confirmation);
+        await assignRole(session, idSchema.parse(form.get("id")), { role: form.get("role"), identifier: form.get("identifier") || undefined, programStudiId: form.get("programStudiId") || undefined }, reason, confirmation);
         break;
       case "approve-reset":
       case "reject-reset":

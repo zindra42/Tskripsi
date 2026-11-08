@@ -8,7 +8,6 @@ import { idSchema, newPasswordSchema, settingDefinitions, validateSettings } fro
 import { tokenHash } from "../src/lib/auth/tokens";
 
 import { fixture, session, syntheticDatabase } from "./helpers/accounts-db";
-type Row = Record<string, unknown>;
 const serialized = (value: unknown) => JSON.stringify(value, (_key, item) => typeof item === "bigint" ? item.toString() : item);
 
 test("aturan akun dan identitas mengikuti source terbaru", () => {
@@ -401,10 +400,10 @@ test("layanan akun memakai transaksi, database dan sesi sintetis", async (t) => 
 
   await t.test("perubahan peran mempertahankan kedua profil dan menolak pemakaian ulang identitas historis", async () => {
     setup();
-    await assignRole(session(admin), 4n, { role: "dosen", identifier: "991144" }, reason, "UBAH PERAN");
+    await assignRole(session(admin), 4n, { role: "dosen", identifier: "991144", programStudiId: "1" }, reason, "UBAH PERAN");
     assert.equal(harness.tables.mahasiswa.find((row) => row.penggunaId === 4n)?.nim, student.mahasiswa!.nim);
     assert.equal(harness.tables.dosen.find((row) => row.penggunaId === 4n)?.nidn, "991144");
-    await assert.rejects(assignRole(session(admin), 5n, { role: "mahasiswa", identifier: student.mahasiswa!.nim }, reason, "UBAH PERAN"), /NIM sudah/);
+    await assert.rejects(assignRole(session(admin), 5n, { role: "mahasiswa", identifier: student.mahasiswa!.nim, programStudiId: "1" }, reason, "UBAH PERAN"), /NIM sudah/);
     await assignRole(session(admin), 4n, { role: "mahasiswa" }, reason, "UBAH PERAN");
     assert.equal(harness.tables.dosen.find((row) => row.penggunaId === 4n)?.nidn, "991144");
     assert.ok(!harness.tables.authSession.some((row) => row.penggunaId === 4n));

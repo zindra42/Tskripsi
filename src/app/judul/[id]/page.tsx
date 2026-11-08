@@ -13,9 +13,9 @@ export const dynamic = "force-dynamic";
 export default async function TitlePage({ params }: { params: Promise<{ id: string }> }) {
   const { session, actor, manager } = await academicViewer();
   const id = routeId((await params).id);
-  const row = await database().pengajuanJudul.findUnique({ where: { id }, include: { bimbingan: true, mahasiswa: { select: { nama: true } } } });
+  const row = await database().pengajuanJudul.findUnique({ where: { id }, include: { bimbingan: true, mahasiswa: { select: { nama: true, mahasiswa: { select: { programStudiId: true } } } } } });
   if (!row || row.deletedAt || !canReadTitle(actor, session.activeRole, row, row.bimbingan)) notFound();
-  const suggestions = manager && row.status === "disetujui" ? await recommendations(row, row.bimbingan?.id) : [];
+  const suggestions = manager && row.status === "disetujui" ? await recommendations(row, row.bimbingan?.id, row.mahasiswa.mahasiswa?.programStudiId) : [];
   const current = !row.isDiarsipkan && row.statusDraft === "diajukan";
   const pref = storedIds(row.preferensiDosenIds);
   const warning = similarityWarning(row.skorKemiripan, await getCachedSystemSettings());

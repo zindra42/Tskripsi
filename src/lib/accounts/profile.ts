@@ -1,6 +1,7 @@
 import "server-only";
 import { activeProgram, hasLeadership } from "@/lib/organization/store";
 import { canDecideAccount } from "./policy";
+import { activeProgramId } from "@/lib/organization/policy";
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import type { AuthenticatedSession } from "@/lib/auth/session";
@@ -111,6 +112,7 @@ export async function decideProfileRequest(session: AuthenticatedSession, kind: 
       ensure((kind === "biodata" && target.role === "mahasiswa") || (kind === "keahlian" && target.dosen && ["dosen", "kaprodi", "sekpro"].includes(target.role)), "Peran akun telah berubah.");
       // Legacy NIDN and expertise requests predate the explicit change flags.
       if (request.ubahProgramStudi) ensure(request.programStudiLamaId === (kind === "biodata" ? target.mahasiswa : target.dosen)?.programStudiId, "Afiliasi telah berubah sejak pengajuan.");
+      if (request.ubahProgramStudi && actor.role !== "superadmin") ensure(activeProgramId(actor.dosen) === request.programStudiBaruId, "Perpindahan lintas prodi memerlukan superadmin.");
       const fields: Record<string, unknown> = {
         programStudiId: request.ubahProgramStudi ? String(request.programStudiBaruId) : undefined,
         nama: request.ubahNama ? request.namaBaru : undefined,

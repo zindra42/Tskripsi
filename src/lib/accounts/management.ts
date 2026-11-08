@@ -1,8 +1,9 @@
 import "server-only";
+import { activeProgram, hasLeadership, clearLeadership, rotateLeadership } from "@/lib/organization/store";
 import { z } from "zod";
 import type { AuthenticatedSession } from "@/lib/auth/session";
 import { canDecideAccount, hasAuthority, restoredIdentity } from "./policy";
-import { reasonSchema, identifierSchema } from "./validation";
+import { reasonSchema, identifierSchema, idSchema } from "./validation";
 import { accountTransaction, assertIdentities, assertSingleKaprodi, audit, checkedActor, ensure, identitySnapshot, invalidateSessions, lockedAccount, settingsValues } from "./store";
 
 export async function decideAccounts(session: AuthenticatedSession, ids: bigint[], approve: boolean, reason: string) {
@@ -15,7 +16,10 @@ export async function decideAccounts(session: AuthenticatedSession, ids: bigint[
       const target = await lockedAccount(tx, id);
       ensure(target.deletedAt === null && target.statusAkun === "menunggu_persetujuan", "Akun sudah diproses atau terhapus. Muat ulang daftar.");
       ensure(canDecideAccount(actor, target), "Persetujuan akun pimpinan memerlukan Kaprodi atau superadmin.");
-      if (approve && hasAuthority(target, "kaprodi")) await assertSingleKaprodi(tx, id, target.dosen?.programStudiId);
+      if (approve) {
+        if (["mahasiswa", "dosen", "kaprodi", "sekpro"].includes(target.role)) await activeProgram(tx, target.role === "mahasiswa" ? target.mahasiswa?.programStudiId : target.dosen?.programStudiId);
+        for (const office of ["kaprodi", "sekpro"] as const) if (target.role === office || target.dosen?.[office === "kaprodi" ? "isKaprodi" : "isSekpro"]) await assertSingleKaprodi(tx, id, target.dosen?.programStudiId, office);
+      }
       await tx.pengguna.update({ where: { id }, data: { statusAkun: approve ? "aktif" : "ditolak", catatanPenolakan: approve ? null : reason } });
       if (approve && target.dosen) await tx.dosen.update({ where: { penggunaId: id }, data: { kuotaBimbingan: Number(settings.kuota_bimbingan_default ?? 10) } });
       await invalidateSessions(tx, id);
@@ -31,11 +35,16 @@ export async function changeAccountStatus(session: AuthenticatedSession, id: big
     const actor = await checkedActor(tx, session, action === "delete" ? "manage" : "superadmin");
     const target = await lockedAccount(tx, id);
     ensure(actor.id !== id && target.role !== "superadmin", "Tindakan terhadap akun sendiri atau superadmin tidak diizinkan.");
-    ensure(!(hasAuthority(actor, "sekpro") && hasAuthority(target, "kaprodi")), "Sekpro tidak dapat menghapus Kaprodi.");
+    if (action === "delete") ensure(canDecideAccount(actor, target), "Akun berada di luar kewenangan Anda.");
     const before = identitySnapshot(target);
+    if (target.role === "dekan" && (action === "restore" || action === "activate")) {
+      const faculty = target.fakultasId ? await tx.fakultas.findUnique({ where: { id: target.fakultasId } }) : null;
+      ensure(faculty?.aktif, "Penempatan Dekan memerlukan fakultas aktif. Tetapkan melalui tata kelola.");
+      ensure(!await tx.pengguna.findFirst({ where: { id: { not: id }, role: "dekan", fakultasId: target.fakultasId, statusAkun: "aktif", deletedAt: null } }), "Fakultas sudah mempunyai Dekan aktif.");
+    }
     if (action === "delete" || action === "deactivate") {
       ensure(target.deletedAt === null, "Akun sudah terhapus.");
-      ensure(actor.role !== "superadmin" || !hasAuthority(target, "kaprodi"), "Alihkan jabatan Kaprodi sebelum menonaktifkan atau menghapus akunnya.");
+      ensure(!hasLeadership(target), "Alihkan atau berhentikan jabatan Kaprodi/Sekpro sebelum menonaktifkan atau menghapus akunnya.");
     }
     if (action === "delete") {
       // Preserve both versions if a legacy row contains active and archived credentials.
@@ -49,13 +58,13 @@ export async function changeAccountStatus(session: AuthenticatedSession, id: big
       const nidn = restoredIdentity(target.dosen?.nidn ?? null, target.dosen?.nidnArsip ?? null, "identifier");
       ensure(email && z.email().safeParse(email).success, "Email pemulihan tidak tersedia atau tidak valid.");
       await assertIdentities(tx, id, { email, nim, nidn });
-      if (hasAuthority(target, "kaprodi")) await assertSingleKaprodi(tx, id, target.dosen?.programStudiId);
+      for (const office of ["kaprodi", "sekpro"] as const) if (target.role === office || target.dosen?.[office === "kaprodi" ? "isKaprodi" : "isSekpro"]) await assertSingleKaprodi(tx, id, target.dosen?.programStudiId, office);
       await tx.pengguna.update({ where: { id }, data: { email, emailArsip: null, deletedAt: null, statusAkun: "aktif", catatanPenolakan: null } });
       if (target.mahasiswa) await tx.mahasiswa.update({ where: { penggunaId: id }, data: { nim, nimArsip: null } });
       if (target.dosen) await tx.dosen.update({ where: { penggunaId: id }, data: { nidn, nidnArsip: null } });
     } else {
       ensure(target.deletedAt === null && target.statusAkun === (action === "activate" ? "nonaktif" : "aktif"), "Status akun sudah berubah. Muat ulang daftar.");
-      if (action === "activate" && hasAuthority(target, "kaprodi")) await assertSingleKaprodi(tx, id, target.dosen?.programStudiId);
+      if (action === "activate") for (const office of ["kaprodi", "sekpro"] as const) if (target.role === office || target.dosen?.[office === "kaprodi" ? "isKaprodi" : "isSekpro"]) await assertSingleKaprodi(tx, id, target.dosen?.programStudiId, office);
       await tx.pengguna.update({ where: { id }, data: { statusAkun: action === "activate" ? "aktif" : "nonaktif" } });
     }
     await invalidateSessions(tx, id);
@@ -64,7 +73,7 @@ export async function changeAccountStatus(session: AuthenticatedSession, id: big
 }
 
 export async function assignRole(session: AuthenticatedSession, id: bigint, input: unknown, reason: string, confirmation: string) {
-  const data = z.object({ role: z.enum(["mahasiswa", "dosen", "kaprodi", "sekpro"]), identifier: identifierSchema.optional() }).parse(input);
+  const data = z.object({ role: z.enum(["mahasiswa", "dosen", "kaprodi", "sekpro"]), identifier: identifierSchema.optional(), programStudiId: idSchema.optional() }).parse(input);
   reasonSchema.parse(reason);
   ensure(confirmation === "UBAH PERAN", "Ketik UBAH PERAN untuk melanjutkan.");
   return accountTransaction(async (tx) => {
@@ -74,39 +83,34 @@ export async function assignRole(session: AuthenticatedSession, id: bigint, inpu
     const effectiveRole = hasAuthority(target, "kaprodi") ? "kaprodi" : hasAuthority(target, "sekpro") ? "sekpro" : target.role;
     ensure(data.role !== effectiveRole, "Peran tujuan harus berbeda dari peran saat ini.");
     const before = identitySnapshot(target);
-    if (data.role === "kaprodi") {
-      const oldLeaders = await tx.pengguna.findMany({ where: {
-        id: { not: id },
-        ...(target.dosen?.prodi ? { dosen: { prodi: target.dosen.prodi } } : {}),
-        OR: [{ role: "kaprodi" }, { role: "dosen", dosen: { isKaprodi: true } }],
-      }, select: { id: true, role: true } });
-      for (const old of oldLeaders) {
-        await lockedAccount(tx, old.id);
-        if (old.role === "kaprodi") await tx.pengguna.update({ where: { id: old.id }, data: { role: "dosen" } });
-        await tx.dosen.updateMany({ where: { penggunaId: old.id }, data: { isKaprodi: false } });
-        await invalidateSessions(tx, old.id);
-        await audit(tx, actor.id, "penurunan_peran_kaprodi_lama", `pengguna:${old.id}`, { replacementId: id, reason });
-      }
+    if (data.role === "kaprodi" || data.role === "sekpro") {
+      ensure(target.dosen && ["dosen", "kaprodi", "sekpro"].includes(target.role), "Pejabat harus akun dosen aktif; ubah peran dan afiliasi terlebih dahulu.");
+      const program = await activeProgram(tx, target.dosen.programStudiId);
+      await rotateLeadership(tx, actor, program.id, data.role, id, reason);
+      return;
     }
+    const existingProfile = data.role === "mahasiswa" ? target.mahasiswa : target.dosen;
+    const program = await activeProgram(tx, data.programStudiId ?? existingProfile?.programStudiId);
+    await clearLeadership(tx, target);
     const now = new Date();
     if (data.role === "mahasiswa") {
       if (!target.mahasiswa) {
         ensure(data.identifier, "NIM wajib diisi untuk profil mahasiswa baru.");
         await assertIdentities(tx, id, { nim: data.identifier });
-        await tx.mahasiswa.create({ data: { penggunaId: id, nim: data.identifier, semester: 1, noHp: null, createdAt: now, updatedAt: now } });
+        await tx.mahasiswa.create({ data: { penggunaId: id, programStudiId: program.id, prodi: program.nama, nim: data.identifier, semester: 1, noHp: null, createdAt: now, updatedAt: now } });
       }
-      await tx.dosen.updateMany({ where: { penggunaId: id }, data: { isKaprodi: false, isSekpro: false } });
+      await tx.mahasiswa.update({ where: { penggunaId: id }, data: { programStudiId: program.id, prodi: program.nama } });
     } else {
       if (!target.dosen) {
         ensure(data.identifier, "NIDN wajib diisi untuk profil dosen baru.");
         await assertIdentities(tx, id, { nidn: data.identifier });
         const settings = await settingsValues(tx);
-        await tx.dosen.create({ data: { penggunaId: id, nidn: data.identifier, kuotaBimbingan: Number(settings.kuota_bimbingan_default ?? 10), createdAt: now, updatedAt: now } });
+        await tx.dosen.create({ data: { penggunaId: id, programStudiId: program.id, prodi: program.nama, nidn: data.identifier, kuotaBimbingan: Number(settings.kuota_bimbingan_default ?? 10), createdAt: now, updatedAt: now } });
       }
-      await tx.dosen.update({ where: { penggunaId: id }, data: { isKaprodi: data.role === "kaprodi", isSekpro: data.role === "sekpro" } });
+      await tx.dosen.update({ where: { penggunaId: id }, data: { isKaprodi: false, isSekpro: false, programStudiId: program.id, prodi: program.nama } });
     }
     // Historical profiles stay attached to the source ID for phased migration.
-    await tx.pengguna.update({ where: { id }, data: { role: data.role === "mahasiswa" ? "mahasiswa" : "dosen" } });
+    await tx.pengguna.update({ where: { id }, data: { role: data.role === "mahasiswa" ? "mahasiswa" : "dosen", fakultasId: null } });
     await invalidateSessions(tx, id);
     // Requests from the former role must never apply to the new role.
     await tx.biodataChangeRequest.updateMany({ where: { mahasiswaId: id, status: "pending" }, data: { status: "ditolak", catatanKaprodi: "Peran akun telah berubah.", diputuskanOleh: actor.id, diputuskanAt: now } });

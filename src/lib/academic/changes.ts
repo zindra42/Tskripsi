@@ -1,4 +1,5 @@
 import "server-only";
+import { managesTitle } from "./policy";
 import { z } from "zod";
 import { ensure, jsonValue } from "@/lib/accounts/store";
 import { idSchema } from "@/lib/accounts/validation";
@@ -55,12 +56,7 @@ export async function decideChange(context: Context, input: Input, approve: bool
     return;
   }
   requireManager(context);
-  if (actor.role !== "superadmin" && actor.dosen?.prodi) {
-    const studentProdi = b.pengajuan.mahasiswa.mahasiswa?.prodi;
-    if (studentProdi && studentProdi.trim().toLowerCase() !== actor.dosen.prodi.trim().toLowerCase()) {
-      ensure(false, "Perubahan judul hanya dapat diproses oleh pengelola Program Studi yang bersangkutan.");
-    }
-  }
+  ensure(managesTitle(actor, context.role, b.pengajuan), "Perubahan judul di luar kewenangan program studi Anda.");
   ensure(row.status === "menunggu_kaprodi" && row.disetujuiDospem1 && (!b.idDosenPembimbing2 || row.disetujuiDospem2), "Persetujuan seluruh pembimbing belum lengkap.");
   ensure(row.judulLama === b.pengajuan.judul, "Snapshot judul telah berubah. Ajukan permohonan baru.");
   if (approve) {

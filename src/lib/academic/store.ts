@@ -2,7 +2,7 @@ import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { audit, ensure, jsonValue, type Tx } from "@/lib/accounts/store";
 import { canManage } from "@/lib/accounts/policy";
-import { currentTitle, isAssigned } from "./policy";
+import { currentTitle, isAssigned, managesTitle } from "./policy";
 import {
   createIdempotentMutation,
   type MutationContext,
@@ -88,6 +88,7 @@ export async function cancelSupervisor(context: Context, id: bigint, slot: 1 | 2
   if (cause === "renewal") requireFinance(context); else requireManager(context);
   if (archiving) ensure(context.actor.role === "superadmin", "Pengarsipan bisnis memerlukan superadmin.");
   const b = await guidanceRecord(context, id, !archiving);
+  if (cause !== "renewal") ensure(managesTitle(context.actor, context.role, b.pengajuan), "Bimbingan di luar kewenangan program studi Anda.");
   const oldId = slot === 1 ? b.idDosenPembimbing : b.idDosenPembimbing2;
   ensure(oldId, "Slot pembimbing sudah kosong.");
   const old = await context.tx.pengguna.findUniqueOrThrow({ where: { id: oldId }, select: { nama: true } });

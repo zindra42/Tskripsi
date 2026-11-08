@@ -15,7 +15,7 @@ export default async function TitlesPage({ searchParams }: { searchParams: Promi
   const rows = await database().pengajuanJudul.findMany({ where: { ...scopedTitles(actor, manager), deletedAt: null,
     ...(query ? { judul: { contains: query, mode: "insensitive" } } : {}),
   }, include: { mahasiswa: { select: { nama: true } } }, orderBy: { id: "desc" }, take: 21, skip: (page - 1) * 20 });
-  const options = actor.role === "mahasiswa" ? await titleOptions() : null;
+  const options = actor.role === "mahasiswa" ? await titleOptions(actor.mahasiswa?.programStudiId) : null;
   const draft = actor.role === "mahasiswa" ? await database().pengajuanJudul.findFirst({ where: { idMahasiswa: actor.id, deletedAt: null, isDiarsipkan: false, OR: [{ statusDraft: "draft" }, { status: "direvisi" }] }, orderBy: { id: "desc" } }) : null;
   const settings = await getCachedSystemSettings();
   return <WorkspaceShell session={session}><div className="mb-5 flex flex-wrap items-center justify-between gap-4"><h1 className="text-3xl font-bold">Pengajuan judul</h1><Link className="underline" href="/arsip-judul">Arsip judul terdahulu</Link></div>

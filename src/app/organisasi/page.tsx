@@ -23,6 +23,13 @@ export default async function OrganizationPage() {
       {programs.filter((p) => p.fakultasId === f.id).map((p) => <article key={String(p.id)} className="rounded-xl border border-slate-200 p-5"><h3 className="text-lg font-semibold">{p.nama} · {p.jenjang} · {p.kode} · {p.aktif ? "Aktif" : "Nonaktif"}</h3>
         <p className="my-3 text-sm">{p.dosen.map((d) => `${d.pengguna.nama}: ${d.isKaprodi || d.pengguna.role === "kaprodi" ? "Kaprodi" : ""} ${d.isSekpro || d.pengguna.role === "sekpro" ? "Sekpro" : ""}`).join(", ") || "Pimpinan belum ditetapkan"}</p>
         {f.aktif && <details><summary className="cursor-pointer font-semibold">Ubah program studi</summary><OrganizationForm command="program"><input type="hidden" name="id" value={String(p.id)} /><input type="hidden" name="fakultasId" value={String(f.id)} /><MasterFields program values={p} /></OrganizationForm></details>}
+        <details className="mt-4"><summary className="cursor-pointer font-semibold">Penetapan / rotasi / pemberhentian pimpinan</summary>
+          <p className="my-3 text-sm">Pejabat lama kembali menjadi dosen, dengan jabatan lain dan penugasan historis tetap tersimpan. Pilih pemberhentian sebelum menonaktifkan prodi atau memindahkan afiliasi.</p>
+          <OrganizationForm command="leadership" label="Simpan jabatan"><input type="hidden" name="programStudiId" value={String(p.id)} />
+            <label>Jabatan<select name="office"><option value="kaprodi">Kaprodi</option><option value="sekpro">Sekpro</option></select></label>
+            <label>Pejabat pengganti<select name="targetId"><option value="">Berhentikan pejabat saat ini</option>{p.aktif && f.aktif && candidates.filter((c) => c.role !== "dekan" && c.dosen?.programStudiId === p.id).map((c) => <option value={String(c.id)} key={String(c.id)}>{c.nama} (#{String(c.id)})</option>)}</select></label>
+          </OrganizationForm>
+        </details>
       </article>)}
     </section>)}</div>
   </WorkspaceShell>;

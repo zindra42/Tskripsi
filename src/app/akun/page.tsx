@@ -1,3 +1,4 @@
+import { scopedAccounts } from "@/lib/accounts/policy";
 import Link from "next/link";
 import type { Prisma } from "@/generated/prisma/client";
 import { WorkspaceShell } from "@/components/workspace-shell";
@@ -19,12 +20,7 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
   const where: Prisma.PenggunaWhereInput = {
     role: { not: "superadmin" }, deletedAt: deleted ? { not: null } : null,
     ...(!deleted ? { statusAkun: status === "deleted" ? "menunggu_persetujuan" : status as "aktif" | "nonaktif" | "ditolak" | "menunggu_persetujuan" } : {}),
-    ...(!admin && session.user.dosen?.prodi ? {
-      OR: [
-        { mahasiswa: { prodi: session.user.dosen.prodi } },
-        { dosen: { prodi: session.user.dosen.prodi } },
-      ],
-    } : {}),
+    AND: [scopedAccounts(session.user)],
     ...(query ? { OR: [{ nama: { contains: query, mode: "insensitive" } }, { email: { contains: query, mode: "insensitive" } },
       { mahasiswa: { nim: { contains: query } } }, { dosen: { nidn: { contains: query } } },
       ...(admin ? [{ emailArsip: { contains: query, mode: "insensitive" as const } }] : [])] } : {}),

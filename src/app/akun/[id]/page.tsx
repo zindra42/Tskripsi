@@ -2,7 +2,7 @@ import { activeProgramOptions } from "@/lib/organization/store";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { WorkspaceShell } from "@/components/workspace-shell";
-import { ActionForm, Field, ProfileFields, ReasonField } from "@/components/account-forms";
+import { ActionForm, Field, ProfileFields, ReasonField, ProgramSelect } from "@/components/account-forms";
 import { database } from "@/lib/db";
 import { roleLabels } from "@/lib/auth/policy";
 import { canDecideAccount, inAccountScope } from "@/lib/accounts/policy";
@@ -41,6 +41,7 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
           <p className="mb-5 text-sm text-slate-600">Penetapan Kaprodi mengalihkan jabatan dari pemegang sebelumnya. Sesi pengguna terdampak dicabut. Profil historis tetap terhubung ke ID sumber.</p>
           <ActionForm command="role" label="Tetapkan peran"><input type="hidden" name="id" value={id} />
             <label>Peran tujuan<select name="role"><option value="mahasiswa">Mahasiswa</option><option value="dosen">Dosen</option><option value="kaprodi">Kaprodi</option><option value="sekpro">Sekpro</option></select></label>
+            <ProgramSelect required={false} options={await activeProgramOptions()} />
             <Field name="identifier" label="NIM atau NIDN jika profil tujuan belum ada" required={false} /><ReasonField /><Field name="confirmation" label="Ketik UBAH PERAN" />
           </ActionForm>
         </section>

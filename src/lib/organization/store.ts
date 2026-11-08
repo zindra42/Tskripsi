@@ -25,11 +25,51 @@ export async function clearLeadership(tx: Tx, user: Account) {
   if (["kaprodi", "sekpro"].includes(user.role)) await tx.pengguna.update({ where: { id: user.id }, data: { role: "dosen" } });
 }
 
-async function governor(tx: Tx, session: AuthenticatedSession, facultyId?: bigint) {
+export async function governor(tx: Tx, session: AuthenticatedSession, facultyId?: bigint) {
   const actor = await checkedActor(tx, session);
   const live = await tx.authSession.findUniqueOrThrow({ where: { tokenHash: session.tokenHash } });
   ensure(canGovern(actor, live.activeRole, facultyId), "Anda tidak berwenang mengelola fakultas ini.");
   return actor;
+}
+
+export async function rotateLeadership(tx: Tx, actor: Account, programId: bigint, office: "kaprodi" | "sekpro", targetId: bigint | null, reason: string) {
+  if (targetId) await activeProgram(tx, programId);
+  const target = targetId ? await lockedAccount(tx, targetId) : null;
+  if (target) ensure(target.dosen?.programStudiId === programId && target.deletedAt === null && target.statusAkun === "aktif"
+    && ["dosen", "kaprodi", "sekpro"].includes(target.role), "Pejabat harus dosen aktif dari program studi tujuan.");
+  const key = office === "kaprodi" ? "isKaprodi" : "isSekpro";
+  const old = await tx.pengguna.findMany({ where: { dosen: { programStudiId: programId }, OR: [{ role: office }, { dosen: { [key]: true } }] }, select: { id: true } });
+  // Clear the unique slot before setting its replacement. Shared advisory lock serializes all entry points.
+  for (const row of old) {
+    const user = await lockedAccount(tx, row.id), before = identitySnapshot(user);
+    await tx.dosen.update({ where: { penggunaId: row.id }, data: {
+      isKaprodi: office === "kaprodi" ? false : user.dosen!.isKaprodi || user.role === "kaprodi",
+      isSekpro: office === "sekpro" ? false : user.dosen!.isSekpro || user.role === "sekpro",
+    } });
+    if (["kaprodi", "sekpro"].includes(user.role)) await tx.pengguna.update({ where: { id: row.id }, data: { role: "dosen" } });
+    await invalidateSessions(tx, row.id);
+    await audit(tx, actor.id, `pemberhentian_${office}`, `pengguna:${row.id}`, { programId, replacementId: targetId, before, after: identitySnapshot(await lockedAccount(tx, row.id)), reason });
+  }
+  if (target) {
+    const current = await lockedAccount(tx, target.id), before = identitySnapshot(current);
+    await tx.dosen.update({ where: { penggunaId: target.id }, data: {
+      isKaprodi: office === "kaprodi" || current.dosen!.isKaprodi || current.role === "kaprodi",
+      isSekpro: office === "sekpro" || current.dosen!.isSekpro || current.role === "sekpro",
+    } });
+    await tx.pengguna.update({ where: { id: target.id }, data: { role: "dosen", fakultasId: null } });
+    if (!old.some((u) => u.id === target.id)) await invalidateSessions(tx, target.id);
+    await audit(tx, actor.id, `penetapan_${office}`, `pengguna:${target.id}`, { programId, before, after: identitySnapshot(await lockedAccount(tx, target.id)), reason });
+  }
+}
+
+export async function appointLeadership(session: AuthenticatedSession, programId: bigint, office: "kaprodi" | "sekpro", targetId: bigint | null, reason: string) {
+  reasonSchema.parse(reason);
+  return accountTransaction(async (tx) => {
+    const program = await tx.programStudi.findUnique({ where: { id: programId } });
+    ensure(program, "Program studi tidak ditemukan.");
+    const actor = await governor(tx, session, program.fakultasId);
+    await rotateLeadership(tx, actor, program.id, office, targetId, reason);
+  });
 }
 
 export async function saveFaculty(session: AuthenticatedSession, id: bigint | undefined, input: unknown, reason: string) {

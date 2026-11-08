@@ -18,7 +18,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ kin
       const actor = await checkedActor(tx, session);
       const live = await tx.authSession.findUniqueOrThrow({ where: { tokenHash: session.tokenHash } });
       if (kind === "proposal" && file === "proposal") {
-        const row = await tx.pengajuanJudul.findUnique({ where: { id: parsed.data }, include: { bimbingan: true } });
+        const row = await tx.pengajuanJudul.findUnique({ where: { id: parsed.data }, include: { bimbingan: true, mahasiswa: { select: { mahasiswa: { select: { programStudiId: true } } } } } });
         return row && !row.deletedAt && canReadTitle(actor, live.activeRole, row, row.bimbingan) ? row.fileProposal : null;
       }
       if (kind === "administrasi") {

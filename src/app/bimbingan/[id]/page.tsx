@@ -15,7 +15,7 @@ export default async function GuidanceDetail({ params, searchParams }: { params:
   const { session, actor, manager, kaprodi } = await academicViewer();
   const id = routeId((await params).id);
   const page = pageNumber((await searchParams).page);
-  const b = await database().bimbingan.findUnique({ where: { id }, include: { pengajuan: true,
+  const b = await database().bimbingan.findUnique({ where: { id }, include: { pengajuan: { include: { mahasiswa: { select: { mahasiswa: { select: { programStudiId: true } } } } } },
     pembimbing1: { select: { nama: true } }, pembimbing2: { select: { nama: true } },
     logbook: { orderBy: { id: "desc" }, take: 21, skip: (page - 1) * 20 },
     schedules: { where: { deletedAt: null }, orderBy: { id: "desc" }, take: 21, skip: (page - 1) * 20 },
@@ -26,7 +26,7 @@ export default async function GuidanceDetail({ params, searchParams }: { params:
   const owner = actor.role === "mahasiswa" && b.pengajuan.idMahasiswa === actor.id;
   const supervisor = Boolean(actor.dosen && ["dosen", "kaprodi", "sekpro"].includes(actor.role) && isAssigned(actor.id, b));
   const writable = currentTitle(b.pengajuan) && b.pengajuan.status === "disetujui";
-  const [settings, options, count] = await Promise.all([getCachedSystemSettings(), owner ? titleOptions() : null,
+  const [settings, options, count] = await Promise.all([getCachedSystemSettings(), owner ? titleOptions(actor.mahasiswa?.programStudiId) : null,
     database().logbookBimbingan.count({ where: { idBimbingan: id, fase: "sempro", statusSelesai: true, isDibatalkan: false } }),
   ]);
   const supervisors = [[b.idDosenPembimbing, b.pembimbing1?.nama], [b.idDosenPembimbing2, b.pembimbing2?.nama]] as const;

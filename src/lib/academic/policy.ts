@@ -2,6 +2,7 @@ import type { Bimbingan, PengajuanJudul, VerifikasiPembayaran } from "@/generate
 import type { Account } from "@/lib/accounts/store";
 import { canManage } from "@/lib/accounts/policy";
 import type { Role } from "@/generated/prisma/enums";
+import { activeProgramId } from "@/lib/organization/policy";
 
 export function witaDate(now = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Makassar", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
@@ -33,8 +34,14 @@ export function isLecturer(user: Account) {
   return Boolean(user.dosen && ["dosen", "kaprodi", "sekpro"].includes(user.role));
 }
 
-export function canReadTitle(user: Account, role: Role, title: Pick<PengajuanJudul, "idMahasiswa">, b: Bimbingan | null) {
-  return user.id === title.idMahasiswa || canManage(user, role) || Boolean(isLecturer(user) && b && isAssigned(user.id, b));
+export type TitleScope = Pick<PengajuanJudul, "idMahasiswa"> & { mahasiswa?: { mahasiswa?: { programStudiId: bigint | null } | null } | null };
+export function managesTitle(user: Account, role: Role, title: TitleScope) {
+  return canManage(user, role) && (user.role === "superadmin" || !!activeProgramId(user.dosen)
+    && activeProgramId(user.dosen) === title.mahasiswa?.mahasiswa?.programStudiId);
+}
+export function canReadTitle(user: Account, role: Role, title: TitleScope, b: Bimbingan | null) {
+  return user.role === "mahasiswa" && user.id === title.idMahasiswa || managesTitle(user, role, title)
+    || Boolean(isLecturer(user) && b && isAssigned(user.id, b));
 }
 
 export function currentTitle(title: Pick<PengajuanJudul, "deletedAt" | "isDiarsipkan" | "status">) {

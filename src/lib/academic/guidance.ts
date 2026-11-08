@@ -4,7 +4,7 @@ import { z } from "zod";
 import { ensure, jsonValue, settingsValues } from "@/lib/accounts/store";
 import { idSchema } from "@/lib/accounts/validation";
 import { canManage } from "@/lib/accounts/policy";
-import { isAssigned } from "./policy";
+import { isAssigned, managesTitle } from "./policy";
 import { dateOnly, localDateTime, reason } from "./validation";
 import { event, guidanceRecord, requireSupervisor, type Context, type Input } from "./store";
 
@@ -32,7 +32,7 @@ export async function updateLog(context: Context, input: Input, cancel: boolean)
   ensure(!row.isDibatalkan && row.siklusKe === b.siklusKe, "Logbook dibatalkan atau merupakan arsip siklus sebelumnya.");
   const note = cancel ? reason.parse(input.reason) : z.string().trim().min(3).max(1000).parse(input.catatan);
   if (cancel) {
-    if (!canManage(context.actor, context.role, "settings")) requireSupervisor(context, b);
+    if (!(canManage(context.actor, context.role, "settings") && managesTitle(context.actor, context.role, b.pengajuan))) requireSupervisor(context, b);
   } else ensure(context.actor.role === "mahasiswa" && context.actor.id === b.pengajuan.idMahasiswa, "Catatan hanya dapat diisi mahasiswa pemilik.");
   const data = cancel ? { isDibatalkan: true, dibatalkanAt: new Date(), dibatalkanOlehId: context.actor.id, alasanPembatalan: note, updatedAt: new Date() }
     : { catatanMahasiswa: note, updatedAt: new Date() };

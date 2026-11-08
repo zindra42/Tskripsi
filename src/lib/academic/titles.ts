@@ -1,4 +1,6 @@
 import "server-only";
+import { activeProgram } from "@/lib/organization/store";
+import { managesTitle } from "./policy";
 import { z } from "zod";
 import { academicPeriod, semesterFromNim } from "@/lib/accounts/policy";
 import { ensure, jsonValue, settingsValues } from "@/lib/accounts/store";
@@ -10,9 +12,10 @@ import { draftSchema, reason, titleSchema } from "./validation";
 import { cancelSupervisor, event, managers, requireFinance, requireManager, requireStudent, supervisorLoad, titleRecord, type Context, type Input, type Uploads } from "./store";
 
 async function validateReferences(context: Context, fields: (bigint | null | undefined)[], preferences: bigint[]) {
+  const program = await activeProgram(context.tx, context.actor.mahasiswa?.programStudiId);
   const ids = [...new Set(fields.filter((id): id is bigint => id != null))];
   ensure(await context.tx.bidangKeahlian.count({ where: { id: { in: ids } } }) === ids.length, "Bidang keahlian tidak ditemukan.");
-  ensure(await context.tx.dosen.count({ where: { penggunaId: { in: preferences }, pengguna: { statusAkun: "aktif", deletedAt: null, role: { in: ["dosen", "kaprodi", "sekpro"] } },
+  ensure(await context.tx.dosen.count({ where: { programStudiId: program.id, penggunaId: { in: preferences }, pengguna: { statusAkun: "aktif", deletedAt: null, role: { in: ["dosen", "kaprodi", "sekpro"] } },
     OR: [{ nidn: null }, { NOT: { nidn: { contains: "_DEL_" } } }],
   } }) === preferences.length, "Dosen preferensi tidak aktif.");
 }
@@ -73,12 +76,7 @@ export async function reviewTitle(context: Context, input: Input, decision: "app
   const ownerCancel = decision === "cancel" && title.idMahasiswa === actor.id && actor.role === "mahasiswa";
   if (ownerCancel) ensure(title.status === "diajukan", "Mahasiswa hanya dapat membatalkan judul menunggu review.");
   else requireManager(context);
-  if (!ownerCancel && decision !== "archive" && actor.role !== "superadmin" && actor.dosen?.prodi) {
-    const studentProdi = title.mahasiswa.mahasiswa?.prodi;
-    if (studentProdi && studentProdi.trim().toLowerCase() !== actor.dosen.prodi.trim().toLowerCase()) {
-      ensure(false, "Pengajuan judul hanya dapat diproses oleh pengelola Program Studi yang bersangkutan.");
-    }
-  }
+  if (!ownerCancel) ensure(managesTitle(actor, context.role, title), "Pengajuan di luar kewenangan program studi Anda.");
   const authority = context.role === "sekpro" ? "sekpro" : "kaprodi";
   ensure(ownerCancel || decision === "archive" || authority !== "sekpro" || title.lastVerifierRole !== "kaprodi", "Keputusan Kaprodi bersifat final bagi Sekpro.");
   ensure(decision === "archive" || !title.bimbingan?.idDosenPembimbing && !title.bimbingan?.idDosenPembimbing2,
@@ -140,12 +138,8 @@ export async function assignSupervisors(context: Context, input: Input) {
   const title = await titleRecord(tx, idSchema.parse(input.id));
   ensure(currentTitle(title) && title.status === "disetujui" && title.mahasiswa.role === "mahasiswa" && title.mahasiswa.statusAkun === "aktif" && !title.mahasiswa.deletedAt,
     "Judul harus disetujui dan mahasiswa aktif.");
-  if (context.actor.role !== "superadmin" && context.actor.dosen?.prodi) {
-    const studentProdi = title.mahasiswa.mahasiswa?.prodi;
-    if (studentProdi && studentProdi.trim().toLowerCase() !== context.actor.dosen.prodi.trim().toLowerCase()) {
-      ensure(false, "Penetapan pembimbing hanya dapat diproses oleh pengelola Program Studi yang bersangkutan.");
-    }
-  }
+  ensure(managesTitle(context.actor, context.role, title), "Pengajuan di luar kewenangan program studi Anda.");
+  const program = await activeProgram(tx, title.mahasiswa.mahasiswa?.programStudiId);
   const ids = z.array(idSchema).min(1).max(2).refine((values) => new Set(values).size === values.length).parse(input.supervisors);
   const existing = title.bimbingan;
   ensure(!existing?.idDosenPembimbing || existing.idDosenPembimbing === ids[0], "Batalkan pembimbing 1 sebelum mengganti dosen.");
@@ -154,9 +148,7 @@ export async function assignSupervisors(context: Context, input: Input) {
     const lecturer = await tx.dosen.findUnique({ where: { penggunaId: id }, include: { pengguna: { select: { role: true, statusAkun: true, deletedAt: true } } } });
     ensure(lecturer && lecturer.pengguna.statusAkun === "aktif" && !lecturer.pengguna.deletedAt
       && ["dosen", "kaprodi", "sekpro"].includes(lecturer.pengguna.role) && !lecturer.nidn?.includes("_DEL_"), "Dosen tidak aktif.");
-    if (context.actor.role !== "superadmin" && context.actor.dosen?.prodi && lecturer.prodi) {
-      ensure(lecturer.prodi.trim().toLowerCase() === context.actor.dosen.prodi.trim().toLowerCase(), "Dosen pembimbing harus berasal dari Program Studi yang sama.");
-    }
+    ensure(lecturer.programStudiId === program.id, "Dosen pembimbing harus berasal dari program studi master yang sama.");
     ensure(await supervisorLoad(tx, id, existing?.id) < lecturer.kuotaBimbingan, "Kuota dosen sudah penuh.");
   }
   const data = { idDosenPembimbing: ids[0], idDosenPembimbing2: ids[1] ?? null, tanggalPenetapan: new Date(), updatedAt: new Date() };

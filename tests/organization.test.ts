@@ -81,4 +81,70 @@ test("master, penetapan Dekan dan pemetaan legacy dengan database sintetis", asy
     await assert.rejects(service.linkProfile(live, 3n, "mahasiswa", 1n, reason), /kewenangan/);
     await assert.rejects(service.saveProgram(sessions[2], undefined, data, reason), /tidak berwenang/);
   });
+  await t.test("rotasi kedua jabatan hanya mencabut pejabat prodi tujuan, mempertahankan jabatan lain", async () => {
+    for (const office of ["kaprodi", "sekpro"] as const) {
+      const admin = fixture(1n, "superadmin"), old = fixture(2n, office), next = fixture(3n, "dosen"), foreign = fixture(4n, office);
+      old.dosen!.isKaprodi = true; old.dosen!.isSekpro = true;
+      foreign.dosen = { ...foreign.dosen!, ...affiliation(2n, 2n), isKaprodi: office === "kaprodi", isSekpro: office === "sekpro" };
+      const sessions = [admin, old, next, foreign].map((u) => session(u));
+      const { db, tables, queries } = syntheticDatabase([admin, old, next, foreign], sessions); globalDb.siasDatabase = db;
+      const key = office === "kaprodi" ? "isKaprodi" : "isSekpro", otherKey = office === "kaprodi" ? "isSekpro" : "isKaprodi";
+      await service.appointLeadership(sessions[0], 1n, office, 3n, reason);
+      assert.equal(tables.dosen.find((d) => d.penggunaId === 2n)![key], false);
+      assert.equal(tables.dosen.find((d) => d.penggunaId === 2n)![otherKey], true);
+      assert.equal(tables.pengguna.find((u) => u.id === 2n)!.role, "dosen");
+      assert.equal(tables.dosen.find((d) => d.penggunaId === 3n)![key], true);
+      assert.equal(tables.dosen.find((d) => d.penggunaId === 4n)![key], true);
+      assert.deepEqual(tables.authSession.map((s) => s.penggunaId), [1n, 4n]);
+      const { decideAccounts } = await import("../src/lib/accounts/management");
+      await assert.rejects(decideAccounts(sessions[1], [3n], true, reason), /Sesi telah berubah/);
+      assert.ok(queries.every((q) => q.includes("pg_advisory") || q.includes("FOR UPDATE")));
+      await service.appointLeadership(sessions[0], 1n, office, null, reason);
+      assert.equal(tables.dosen.find((d) => d.penggunaId === 3n)![key], false);
+      assert.ok(tables.logAktivitas.some((a) => a.aksi === `pemberhentian_${office}`));
+    }
+  });
+  await t.test("penetapan menolak ID target palsu, dosen asing/null, nonaktif, terhapus dan Dekan historis", async () => {
+    const { sessions, tables, lecturer } = setup();
+    for (const patch of [{ programStudiId: null }, { programStudiId: 2n }]) {
+      Object.assign(tables.dosen[0], patch);
+      await assert.rejects(service.appointLeadership(sessions[0], 1n, "kaprodi", 2n, reason), /Pejabat harus/);
+    }
+    tables.dosen[0].programStudiId = 1n;
+    for (const patch of [{ statusAkun: "nonaktif", deletedAt: null, role: "dosen" }, { statusAkun: "aktif", deletedAt: new Date(), role: "dosen" }, { statusAkun: "aktif", deletedAt: null, role: "dekan" }]) {
+      Object.assign(tables.pengguna.find((u) => u.id === 2n)!, patch);
+      await assert.rejects(service.appointLeadership(sessions[0], 1n, "sekpro", lecturer.id, reason), /Pejabat harus/);
+    }
+    await assert.rejects(service.appointLeadership(sessions[0], 999n, "kaprodi", 2n, reason), /tidak ditemukan/);
+    await assert.rejects(service.appointLeadership(sessions[0], 1n, "kaprodi", 999n, reason), /Akun tidak ditemukan/);
+    Object.assign(tables.pengguna.find((u) => u.id === 2n)!, { role: "dosen", statusAkun: "aktif", deletedAt: null }); tables.programStudi[0].aktif = false;
+    await assert.rejects(service.appointLeadership(sessions[0], 1n, "kaprodi", 2n, reason), /tidak aktif/);
+    tables.programStudi[0].aktif = true; tables.fakultas[0].aktif = false;
+    await assert.rejects(service.appointLeadership(sessions[0], 1n, "kaprodi", 2n, reason), /tidak aktif/);
+  });
+  await t.test("jalur lama Sekpro, restore, deaktivasi dan perubahan afiliasi menjaga invariant", async () => {
+    const { sessions, tables } = setup();
+    const { assignRole, changeAccountStatus } = await import("../src/lib/accounts/management");
+    const { editAccountProfile } = await import("../src/lib/accounts/profile");
+    await assignRole(sessions[0], 2n, { role: "sekpro" }, reason, "UBAH PERAN");
+    await assert.rejects(changeAccountStatus(sessions[0], 2n, "deactivate", reason, ""), /berhentikan jabatan/);
+    await assert.rejects(editAccountProfile(sessions[0], 2n, { programStudiId: "2" }, reason), /Berhentikan jabatan/);
+    await assert.rejects(service.linkProfile(sessions[0], 2n, "dosen", 2n, reason), /Berhentikan jabatan/);
+    await assert.rejects(service.saveProgram(sessions[0], 1n, { kode: "P1", nama: "Informatika", jenjang: "S1", fakultasId: "1", aktif: false }, reason), /Berhentikan Kaprodi dan Sekpro/);
+    const second = fixture(5n, "sekpro"); second.deletedAt = new Date(); second.dosen!.isSekpro = true;
+    tables.pengguna.push(second as unknown as Record<string, unknown>); tables.dosen.push(second.dosen as unknown as Record<string, unknown>);
+    await assert.rejects(changeAccountStatus(sessions[0], 5n, "restore", reason, "KONFIRMASI"), /Sudah ada Sekpro aktif/);
+    await service.appointLeadership(sessions[0], 1n, "sekpro", null, reason);
+    await changeAccountStatus(sessions[0], 2n, "deactivate", reason, "");
+    await editAccountProfile(sessions[0], 3n, { programStudiId: "2" }, reason);
+    assert.equal(tables.mahasiswa.find((p) => p.penggunaId === 3n)!.programStudiId, 2n);
+  });
+  await t.test("dua rotasi bersamaan diserialkan dan hanya menyisakan satu pejabat", async () => {
+    const admin = fixture(1n, "superadmin"), a = fixture(2n, "dosen"), b = fixture(3n, "dosen");
+    const live = session(admin), memory = syntheticDatabase([admin, a, b], [live]); globalDb.siasDatabase = memory.db;
+    await Promise.all([service.appointLeadership(live, 1n, "kaprodi", 2n, reason), service.appointLeadership(live, 1n, "kaprodi", 3n, reason)]);
+    assert.equal(memory.tables.dosen.filter((p) => p.isKaprodi).length, 1);
+    assert.equal(memory.tables.dosen.find((p) => p.penggunaId === 3n)!.isKaprodi, true);
+    assert.equal(memory.tables.logAktivitas.filter((a) => a.aksi === "penetapan_kaprodi").length, 2);
+  });
 });

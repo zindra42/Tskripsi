@@ -6,7 +6,7 @@ import { hasTrustedOrigin } from "@/lib/auth/origin";
 import { requireSession } from "@/lib/auth/session";
 import { AccountError } from "@/lib/accounts/store";
 import { idSchema } from "@/lib/accounts/validation";
-import { saveFaculty, saveProgram, assignDean, linkProfile } from "@/lib/organization/store";
+import { saveFaculty, saveProgram, assignDean, linkProfile, appointLeadership } from "@/lib/organization/store";
 import type { AccountFormState } from "./accounts";
 
 export async function organizationAction(_state: AccountFormState, form: FormData): Promise<AccountFormState> {
@@ -21,6 +21,7 @@ export async function organizationAction(_state: AccountFormState, form: FormDat
     else if (command === "program") await saveProgram(session, id, input, reason);
     else if (command === "dean") await assignDean(session, idSchema.parse(form.get("fakultasId")), form.get("targetId") ? idSchema.parse(form.get("targetId")) : null, reason);
     else if (command === "link") await linkProfile(session, idSchema.parse(form.get("targetId")), z.enum(["mahasiswa", "dosen"]).parse(form.get("kind")), idSchema.parse(form.get("programStudiId")), reason);
+    else if (command === "leadership") await appointLeadership(session, idSchema.parse(form.get("programStudiId")), z.enum(["kaprodi", "sekpro"]).parse(form.get("office")), form.get("targetId") ? idSchema.parse(form.get("targetId")) : null, reason);
     else return { error: "Tindakan tidak dikenal." };
     revalidatePath("/organisasi", "layout"); revalidatePath("/akun", "layout"); revalidatePath("/profil"); revalidatePath("/dashboard", "layout");
     return { error: "", success: "Perubahan tata kelola disimpan. Pengguna yang terdampak perlu masuk kembali." };

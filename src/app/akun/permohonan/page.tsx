@@ -3,7 +3,7 @@ import { WorkspaceShell } from "@/components/workspace-shell";
 import { ActionForm, ReasonField } from "@/components/account-forms";
 import { database } from "@/lib/db";
 import { accountSelect, jsonValue } from "@/lib/accounts/store";
-import { canDecideReset } from "@/lib/accounts/policy";
+import { canDecideReset, scopedAccounts } from "@/lib/accounts/policy";
 import { requestSummary } from "@/lib/accounts/profile";
 import { pageNumber, requireAccountPermission } from "@/lib/accounts/views";
 
@@ -16,10 +16,10 @@ export default async function RequestsPage({ searchParams }: { searchParams: Pro
   const db = database();
   const skip = (page - 1) * 20;
   const requests = kind === "reset"
-    ? await db.passwordResetRequest.findMany({ where: { status: "menunggu" }, select: { id: true, status: true, identitas: true, pengguna: { select: accountSelect } }, orderBy: { id: "asc" }, skip, take: 21 })
+    ? await db.passwordResetRequest.findMany({ where: { status: "menunggu", pengguna: scopedAccounts(session.user) }, select: { id: true, status: true, identitas: true, pengguna: { select: accountSelect } }, orderBy: { id: "asc" }, skip, take: 21 })
     : kind === "biodata"
-      ? await db.biodataChangeRequest.findMany({ where: { status: "pending" }, include: { mahasiswa: { select: accountSelect } }, orderBy: { id: "asc" }, skip, take: 21 })
-      : await db.keahlianChangeRequest.findMany({ where: { status: "pending" }, include: { dosen: { select: accountSelect } }, orderBy: { id: "asc" }, skip, take: 21 });
+      ? await db.biodataChangeRequest.findMany({ where: { status: "pending", mahasiswa: scopedAccounts(session.user) }, include: { mahasiswa: { select: accountSelect } }, orderBy: { id: "asc" }, skip, take: 21 })
+      : await db.keahlianChangeRequest.findMany({ where: { status: "pending", dosen: scopedAccounts(session.user) }, include: { dosen: { select: accountSelect } }, orderBy: { id: "asc" }, skip, take: 21 });
   return <WorkspaceShell session={session}><h1 className="mb-5 text-3xl font-bold">Permohonan akun</h1>
     <nav className="mb-6 flex flex-wrap gap-5" aria-label="Jenis permohonan">{[["reset", "Reset password"], ["biodata", "Biodata mahasiswa"], ["keahlian", "Data dan keahlian dosen"]].map(([value, label]) => <Link key={value} className="underline" href={`/akun/permohonan?kind=${value}`} aria-current={kind === value ? "page" : undefined}>{label}</Link>)}</nav>
     <div className="space-y-5">{requests.slice(0, 20).map((request) => {

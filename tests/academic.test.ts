@@ -1,4 +1,4 @@
-import { affiliation } from "./helpers/organization";
+import { affiliation, program } from "./helpers/organization";
 import assert from "node:assert/strict";
 import test, { mock } from "node:test";
 import { randomUUID } from "node:crypto";
@@ -38,7 +38,8 @@ function session(actor: Account): AuthenticatedSession {
 // This adapter verifies service behavior and transaction boundaries. PostgreSQL locks and FK execution need integration verification.
 function synthetic(users: Account[]) {
   const tables: Record<string, Row[]> = {};
-  for (const name of ["pengguna", "mahasiswa", "authSession", "pengaturanSistem", "dosen", "bidangKeahlian", "pengajuanJudul", "bimbingan", "logbookBimbingan", "pengajuanPerubahanJudul", "jadwalBimbingan", "dokumenVerifikasi", "verifikasiPembayaran", "arsipJudulSkripsi", "notification", "academicReceipt", "logAktivitas", "logSuperAdmin"]) tables[name] = [];
+  for (const name of ["programStudi", "pengguna", "mahasiswa", "authSession", "pengaturanSistem", "dosen", "bidangKeahlian", "pengajuanJudul", "bimbingan", "logbookBimbingan", "pengajuanPerubahanJudul", "jadwalBimbingan", "dokumenVerifikasi", "verifikasiPembayaran", "arsipJudulSkripsi", "notification", "academicReceipt", "logAktivitas", "logSuperAdmin"]) tables[name] = [];
+  tables.programStudi = [program(), program(2n, 2n)];
   tables.pengguna = users.map((item) => row(clone(item)));
   tables.mahasiswa = users.filter((item) => item.mahasiswa).map((item) => row(clone(item.mahasiswa)));
   tables.authSession = users.map((item) => row(session(item)));
@@ -234,6 +235,28 @@ test("alur akademik menjalankan layanan dan entry point aktual dengan database s
     await run(1, (context) => reviewTitle(context, { id: String(title().id) }, "approve"));
     await run(1, (context) => assignSupervisors(context, { id: String(title().id), supervisors: two ? ["4", "5"] : ["4"] }));
   }
+
+  await t.test("nama prodi sama beda fakultas dan prodi null tidak memberi hak review/penetapan", async () => {
+    for (const programId of [2n, null]) {
+      await establish();
+      const profile = fixture.tables.mahasiswa.find((m) => m.penggunaId === 1n)!;
+      profile.programStudiId = programId; profile.programStudi = programId ? program(programId, 2n) : null;
+      const { canReadTitle } = await import("../src/lib/academic/policy");
+      const record = await fixture.db.pengajuanJudul.findUniqueOrThrow({ where: { id: title().id as bigint }, include: { mahasiswa: { include: { mahasiswa: true } }, bimbingan: true } });
+      assert.equal(canReadTitle(actors[1], "kaprodi", record, record.bimbingan), false);
+      await assert.rejects(run(1, (c) => reviewTitle(c, { id: String(title().id) }, "approve")), /di luar kewenangan/);
+      await assert.rejects(run(1, (c) => assignSupervisors(c, { id: String(title().id), supervisors: ["4"] })), /di luar kewenangan/);
+    }
+  });
+
+  await t.test("Dekan dengan penugasan dan profil dosen historis tidak dapat membuka proposal atau mengisi logbook", async () => {
+    await establish();
+    fixture.tables.pengguna.find((u) => u.id === 4n)!.role = "dekan";
+    const { canReadTitle } = await import("../src/lib/academic/policy");
+    const record = await fixture.db.pengajuanJudul.findUniqueOrThrow({ where: { id: title().id as bigint }, include: { bimbingan: true } });
+    assert.equal(canReadTitle({ ...actors[3], role: "dekan" }, "dekan", record, record.bimbingan), false);
+    await assert.rejects(run(3, (c) => addLog(c, { id: String(bimbingan().id), tanggal: "2026-11-01", catatan: "Bukan hak Dekan", selesai: true, fase: "sempro" })), /bukan pembimbing/);
+  });
 
   await t.test("unggahan memeriksa ukuran, magic bytes, dan path traversal", async () => {
     assert.ok(await validateUpload(new File([pdf.bytes], "proposal.pdf"), true));
