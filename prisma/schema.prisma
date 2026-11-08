@@ -86,6 +86,9 @@ model Pengguna {
   finalPayments PembayaranSidang[] @relation("FinalPaymentOwner")
   finalPaymentReviews PembayaranSidang[] @relation("FinalPaymentReviewer")
   announcementReads PengumumanDibaca[]
+  legacySemproRequests PermohonanSempro[] @relation("LegacySemproApplicant")
+  legacySemproSubstitutions PermohonanSempro[] @relation("LegacySemproSubstitute")
+  legacySemproDecisions PermohonanSempro[] @relation("LegacySemproDecider")
 
   @@map("pengguna")
 }
@@ -513,7 +516,7 @@ model DokumenVerifikasi {
   idSidang BigInt? @map("id_sidang")
   idJadwalSidang BigInt? @map("id_jadwal_sidang")
   penandatanganUserId BigInt? @map("penandatangan_user_id")
-  namaPenandatangan String @map("nama_penandatangan") @db.VarChar(255)
+  namaPenandatangan String? @map("nama_penandatangan") @db.VarChar(255)
   jabatanSnapshot String? @map("jabatan_snapshot") @db.VarChar(255)
   peran String? @db.VarChar(50)
   nomorSurat String? @map("nomor_surat") @db.VarChar(255)
@@ -684,6 +687,13 @@ model PenugasanPenguji {
 }
 
 model JadwalSempro {
+  legacyRequests PermohonanSempro[]
+  statusKonfirmasiPembimbing1 String? @map("status_konfirmasi_pembimbing_1") @db.VarChar(50)
+  statusKonfirmasiPembimbing2 String? @map("status_konfirmasi_pembimbing_2") @db.VarChar(50)
+  statusKonfirmasiPenguji String? @map("status_konfirmasi_penguji") @db.VarChar(50)
+  alasanPerubahanPembimbing1 String? @map("alasan_perubahan_pembimbing_1")
+  alasanPerubahanPembimbing2 String? @map("alasan_perubahan_pembimbing_2")
+  alasanPerubahanPenguji String? @map("alasan_perubahan_penguji")
   id BigInt @id @default(autoincrement())
   idSempro BigInt? @unique @map("id_sempro")
   versi Int @default(1) @db.SmallInt
@@ -712,6 +722,7 @@ model JadwalSempro {
 }
 
 model KonfirmasiJadwalSempro {
+  legacyRequests PermohonanSempro[]
   id BigInt @id @default(autoincrement())
   jadwalSemproId BigInt @map("jadwal_sempro_id")
   versi Int @default(1)
@@ -804,6 +815,12 @@ model DispensasiKehadiranSempro {
 }
 
 model BeritaAcara {
+  statusIzinSusulanPembimbing String? @map("status_izin_susulan_pembimbing") @db.VarChar(30)
+  izinPembimbingBerlakuSampai DateTime? @map("izin_pembimbing_berlaku_sampai") @db.Timestamp(0)
+  alasanSusulanPembimbing String? @map("alasan_susulan_pembimbing")
+  catatanKeputusanKaprodi String? @map("catatan_keputusan_kaprodi")
+  pembimbingPerluRevisi Boolean? @map("pembimbing_perlu_revisi")
+  catatanRevisiPembimbing String? @map("catatan_revisi_pembimbing")
   id BigInt @id @default(autoincrement())
   jenis String @default("sempro") @db.VarChar(20)
   nilaiPembimbing Decimal? @map("nilai_pembimbing") @db.Decimal(5, 2)
@@ -1160,4 +1177,70 @@ model PengumumanDibaca {
   pengguna Pengguna @relation(fields: [penggunaId], references: [id], onDelete: Restrict)
   @@unique([pengumumanId, penggunaId])
   @@map("pengumuman_dibaca")
+}
+
+// Imported historical requests; mutations continue through the existing scheduling services.
+model PermohonanSempro {
+  id BigInt @id @default(autoincrement())
+  jadwalSemproId BigInt @map("jadwal_sempro_id")
+  konfirmasiId BigInt? @map("konfirmasi_id")
+  versiJadwal Int @map("versi_jadwal")
+  jenis String @db.VarChar(30)
+  pemohonTipe String @map("pemohon_tipe") @db.VarChar(20)
+  pemohonUserId BigInt @map("pemohon_user_id")
+  alasan String
+  dosenPenggantiId BigInt? @map("dosen_pengganti_id")
+  slotUsulan Json? @map("slot_usulan")
+  status String @db.VarChar(30)
+  aktifKey String? @unique @map("aktif_key") @db.VarChar(50)
+  keputusanOleh BigInt? @map("keputusan_oleh")
+  alasanKeputusan String? @map("alasan_keputusan")
+  diputuskanAt DateTime? @map("diputuskan_at") @db.Timestamp(0)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  jadwal JadwalSempro @relation(fields: [jadwalSemproId], references: [id], onDelete: Restrict)
+  konfirmasi KonfirmasiJadwalSempro? @relation(fields: [konfirmasiId], references: [id], onDelete: Restrict)
+  pemohon Pengguna @relation("LegacySemproApplicant", fields: [pemohonUserId], references: [id], onDelete: Restrict)
+  pengganti Pengguna? @relation("LegacySemproSubstitute", fields: [dosenPenggantiId], references: [id], onDelete: Restrict)
+  pemutus Pengguna? @relation("LegacySemproDecider", fields: [keputusanOleh], references: [id], onDelete: Restrict)
+  @@map("permohonan_sempro")
+}
+
+// Import journal and immutable source rows are deliberately separate from business receipts.
+model LegacyImportRun {
+  binding String @id @db.Char(64)
+  snapshotId String @map("snapshot_id") @unique @db.VarChar(100)
+  snapshotChecksum String @map("snapshot_checksum") @db.Char(64)
+  mappingVersion String @map("mapping_version") @db.VarChar(100)
+  @@map("legacy_import_runs")
+}
+
+model LegacyImportCheckpoint {
+  binding String @db.Char(64)
+  stage String @db.VarChar(100)
+  checksum String @db.Char(64)
+  @@id([binding, stage])
+  @@map("legacy_import_checkpoints")
+}
+
+model LegacyImportRow {
+  sourceTable String @map("source_table") @db.VarChar(100)
+  sourcePk String @map("source_pk") @db.VarChar(500)
+  binding String @db.Char(64)
+  sourceJson Json @map("source_json")
+  sourceChecksum String @map("source_checksum") @db.Char(64)
+  provenance Json
+  @@id([sourceTable, sourcePk])
+  @@index([binding])
+  @@map("legacy_import_rows")
+}
+
+model LegacyImportFile {
+  id String @id @db.Char(64)
+  binding String @db.Char(64)
+  disk String @db.VarChar(7)
+  path String @db.VarChar(1000)
+  descriptor Json
+  @@index([path])
+  @@map("legacy_import_files")
 }

@@ -245,7 +245,7 @@ export async function terbitkanBeritaAcara(context: SemproContext, beritaAcaraId
 export function renderSuratUndanganPdf(doc: {
   token: string;
   nomorSurat?: string | null;
-  namaPenandatangan: string;
+  namaPenandatangan: string | null;
   jabatanSnapshot?: string | null;
   snapshotJson: unknown;
 }): Buffer {
@@ -310,7 +310,7 @@ export function renderSuratUndanganPdf(doc: {
   const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://sias.uts.ac.id"}/verifikasi/${doc.token}`;
   pdf.drawQrCode(verifyUrl, 410, signY - 110, 75);
 
-  pdf.drawText(doc.namaPenandatangan, 380, signY - 130, 10, true);
+  pdf.drawText(doc.namaPenandatangan ?? "-", 380, signY - 130, 10, true);
   pdf.drawText("Tanda Tangan Elektronik Tersertifikasi SIAS", 380, signY - 142, 8);
 
   return pdf.build();
@@ -318,7 +318,7 @@ export function renderSuratUndanganPdf(doc: {
 
 export function renderBeritaAcaraPdf(doc: {
   token: string;
-  namaPenandatangan: string;
+  namaPenandatangan: string | null;
   jabatanSnapshot?: string | null;
   snapshotJson: unknown;
 }): Buffer {
@@ -392,7 +392,7 @@ export function renderBeritaAcaraPdf(doc: {
   const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://sias.uts.ac.id"}/verifikasi/${doc.token}`;
   pdf.drawQrCode(verifyUrl, 410, signY - 110, 75);
 
-  pdf.drawText(doc.namaPenandatangan, 380, signY - 130, 10, true);
+  pdf.drawText(doc.namaPenandatangan ?? "-", 380, signY - 130, 10, true);
   pdf.drawText("Dokumen Resmi Ber-QR SIAS", 380, signY - 142, 8);
 
   return pdf.build();

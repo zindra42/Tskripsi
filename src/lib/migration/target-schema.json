@@ -1,0 +1,8168 @@
+{
+  "schemaSha256": "5fb874c80acdfaac8364499cf31a0f53a86772b1a73f7b398b789e53ce6ab027",
+  "tables": {
+    "pengguna": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "nama": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "email": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Citext",
+            null
+          ],
+          "enum": null
+        },
+        "email_arsip": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "password": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "role": {
+          "type": "Role",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": [
+            "mahasiswa",
+            "dosen",
+            "kaprodi",
+            "sekpro",
+            "admin_keuangan",
+            "superadmin"
+          ]
+        },
+        "status_akun": {
+          "type": "StatusAkun",
+          "nullable": false,
+          "generated": false,
+          "default": "menunggu_persetujuan",
+          "native": [],
+          "enum": [
+            "menunggu_persetujuan",
+            "aktif",
+            "ditolak",
+            "nonaktif"
+          ]
+        },
+        "catatan_penolakan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "dibuat_oleh_super_admin": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "wajib_ganti_password": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "remember_token": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        },
+        "auth_version": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "0",
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "deleted_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "email"
+        ]
+      ],
+      "foreignKeys": []
+    },
+    "mahasiswa": {
+      "columns": {
+        "pengguna_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "nim": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "nim_arsip": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "semester": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "no_hp": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "pengguna_id"
+      ],
+      "unique": [
+        [
+          "nim"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "pengguna_id",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "dosen": {
+      "columns": {
+        "pengguna_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "nidn": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "nidn_arsip": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "no_hp": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "kuota_bimbingan": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "8",
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "is_kaprodi": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "is_sekpro": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "pengguna_id"
+      ],
+      "unique": [
+        [
+          "nidn"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "pengguna_id",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "admin_keuangan": {
+      "columns": {
+        "pengguna_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "pengguna_id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "pengguna_id",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "auth_sessions": {
+      "columns": {
+        "token_hash": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Char",
+            "64"
+          ],
+          "enum": null
+        },
+        "public_id": {
+          "type": "String",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [
+            "Uuid",
+            null
+          ],
+          "enum": null
+        },
+        "pengguna_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "auth_version": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "active_role": {
+          "type": "Role",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": [
+            "mahasiswa",
+            "dosen",
+            "kaprodi",
+            "sekpro",
+            "admin_keuangan",
+            "superadmin"
+          ]
+        },
+        "remember": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [
+            "Timestamptz",
+            "3"
+          ],
+          "enum": null
+        },
+        "last_activity": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamptz",
+            "3"
+          ],
+          "enum": null
+        },
+        "expires_at": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamptz",
+            "3"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "token_hash"
+      ],
+      "unique": [
+        [
+          "public_id"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "pengguna_id",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "auth_rate_limits": {
+      "columns": {
+        "key": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Char",
+            "64"
+          ],
+          "enum": null
+        },
+        "attempts": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "window_start": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamptz",
+            "3"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "key"
+      ],
+      "unique": [],
+      "foreignKeys": []
+    },
+    "bidang_keahlian": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "nama_bidang": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Citext",
+            null
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "nama_bidang"
+        ]
+      ],
+      "foreignKeys": []
+    },
+    "dosen_keahlian": {
+      "columns": {
+        "dosen_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "bidang_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "dosen_id",
+        "bidang_id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "dosen_id",
+          "table": "dosen",
+          "target": "pengguna_id"
+        },
+        {
+          "column": "bidang_id",
+          "table": "bidang_keahlian",
+          "target": "id"
+        }
+      ]
+    },
+    "pengaturan_sistem": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "kunci": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "nilai": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "keterangan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "kunci"
+        ]
+      ],
+      "foreignKeys": []
+    },
+    "password_reset_requests": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "pengguna_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "identitas": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"menunggu\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "alasan_penolakan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "approved_by": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "approved_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "token": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "64"
+          ],
+          "enum": null
+        },
+        "token_hash": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Char",
+            "64"
+          ],
+          "enum": null
+        },
+        "auth_version": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "expires_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "token"
+        ],
+        [
+          "token_hash"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "pengguna_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "approved_by",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "biodata_change_requests": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "mahasiswa_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "nama_lama": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "nama_baru": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "ubah_nama": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "email_lama": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "email_baru": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "ubah_email": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "nim": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "nim_lama": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "nim_baru": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "ubah_nim": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "semester_lama": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "semester_baru": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "ubah_semester": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "no_hp_lama": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "no_hp_baru": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "ubah_no_hp": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "rincian_data": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"pending\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "catatan_kaprodi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "diputuskan_oleh": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "diputuskan_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "mahasiswa_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "diputuskan_oleh",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "keahlian_change_requests": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "dosen_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "nama_lama": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "nama_baru": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "ubah_nama": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "email_lama": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "email_baru": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "ubah_email": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "nidn_lama": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "nidn_baru": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "ubah_nidn": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "no_hp_lama": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "no_hp_baru": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "ubah_no_hp": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "keahlian_lama": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "keahlian_diajukan": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "ubah_keahlian": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "alasan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"pending\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "catatan_kaprodi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "diputuskan_oleh": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "diputuskan_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "dosen_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "diputuskan_oleh",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "log_aktivitas": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "pengguna_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "aksi": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "entitas_terkait": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "waktu": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "detail": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "data": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"aktif\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "dibatalkan_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "dibatalkan_oleh_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "pelaku_asli_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan_pembatalan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "pengguna_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "dibatalkan_oleh_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "pelaku_asli_id",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "log_super_admin": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "waktu": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "aksi": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "target_type": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "target_identifier": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "target_nama": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "data_sebelum": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "data_sesudah": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "hasil": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"berhasil\"",
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "ip_address": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": []
+    },
+    "verifikasi_pembayaran": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_mahasiswa": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_admin_keuangan": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "file_kwitansi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "file_krs_ska": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "file_bukti_transfer": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "tanggal_transfer": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Date",
+            null
+          ],
+          "enum": null
+        },
+        "nama_pengirim": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "status_verifikasi": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"menunggu_verifikasi\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "catatan_penolakan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "perlu_verifikasi_ulang": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "periode": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        },
+        "siklus_ke": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "snapshot_version": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "80"
+          ],
+          "enum": null
+        },
+        "revision": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "id_mahasiswa",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "id_admin_keuangan",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "pengajuan_judul": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_mahasiswa": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "bidang_keahlian_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "bidang_keahlian_2_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "judul": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "file_proposal": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "matriks_penelitian": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"diajukan\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "status_draft": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"draft\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "draft_data": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "counter_pengajuan": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "0",
+          "native": [],
+          "enum": null
+        },
+        "catatan_kaprodi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "preferensi_dosen_ids": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "skor_kemiripan": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "judul_termirip": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "penulis_termirip": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "nim_termirip": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "tahun_termirip": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "top_kemiripan": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "tanggal_pengajuan": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "tanggal_persetujuan": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "last_verifier_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "last_verifier_role": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "semester_saat_pengajuan": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "periode_akademik_saat_pengajuan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "siklus_ke": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "snapshot_version": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "80"
+          ],
+          "enum": null
+        },
+        "is_diarsipkan": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "diarsipkan_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "diarsipkan_oleh_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan_arsip": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "deleted_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "id_mahasiswa",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "last_verifier_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "diarsipkan_oleh_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "bidang_keahlian_id",
+          "table": "bidang_keahlian",
+          "target": "id"
+        },
+        {
+          "column": "bidang_keahlian_2_id",
+          "table": "bidang_keahlian",
+          "target": "id"
+        }
+      ]
+    },
+    "bimbingan": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_pengajuan": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_dosen_pembimbing": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_dosen_pembimbing_2": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "tanggal_penetapan": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Date",
+            null
+          ],
+          "enum": null
+        },
+        "catatan_permintaan_mhs": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "pembatalan_p1": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "pembatalan_p2": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "siklus_ke": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "fase_skripsi_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "id_pengajuan"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_pengajuan",
+          "table": "pengajuan_judul",
+          "target": "id"
+        },
+        {
+          "column": "id_dosen_pembimbing",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "id_dosen_pembimbing_2",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "logbook_bimbingan": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_bimbingan": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_dosen": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "fase": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"sempro\"",
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "siklus_ke": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "tanggal": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Date",
+            null
+          ],
+          "enum": null
+        },
+        "catatan": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "catatan_mahasiswa": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status_selesai": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "is_dibatalkan": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "dibatalkan_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "dibatalkan_oleh_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan_pembatalan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "id_bimbingan",
+          "table": "bimbingan",
+          "target": "id"
+        },
+        {
+          "column": "id_dosen",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "dibatalkan_oleh_id",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "pengajuan_perubahan_judul": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "bimbingan_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "judul_lama": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "judul_baru": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "matriks_lama": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "matriks_baru": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "bidang_keahlian_id_baru": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "bidang_keahlian_2_id_baru": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "jenis_perubahan": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"revisi_minor\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"menunggu_dospem\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "catatan_dospem": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "catatan_internal_dospem": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "catatan_kaprodi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "konfirmasi_dospem_1_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "konfirmasi_dospem_2_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "disetujui_dospem_1": {
+          "type": "Boolean",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "disetujui_dospem_2": {
+          "type": "Boolean",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "skor_kemiripan": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "penyetuju_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "penyetuju_role": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "keputusan_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "bimbingan_id",
+          "table": "bimbingan",
+          "target": "id"
+        },
+        {
+          "column": "penyetuju_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "bidang_keahlian_id_baru",
+          "table": "bidang_keahlian",
+          "target": "id"
+        },
+        {
+          "column": "bidang_keahlian_2_id_baru",
+          "table": "bidang_keahlian",
+          "target": "id"
+        }
+      ]
+    },
+    "jadwal_bimbingan": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "dosen_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "mahasiswa_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "bimbingan_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "waktu_mulai": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "waktu_selesai": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "lokasi": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "catatan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan_reschedule": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "usulan_waktu_reschedule": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"diajukan\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "deleted_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "dosen_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "mahasiswa_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "bimbingan_id",
+          "table": "bimbingan",
+          "target": "id"
+        }
+      ]
+    },
+    "arsip_judul_skripsi": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "judul": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "nama_penulis": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "nim": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "tahun": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "prodi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        },
+        "keywords": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": []
+    },
+    "dokumen_verifikasi": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "jenis_dokumen": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "token": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "64"
+          ],
+          "enum": null
+        },
+        "id_pengajuan": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_bimbingan": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_sempro": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_jadwal": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_sidang": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_jadwal_sidang": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "penandatangan_user_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "nama_penandatangan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "jabatan_snapshot": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "peran": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "nomor_surat": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"sah\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "versi": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [],
+          "enum": null
+        },
+        "digantikan_oleh_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "snapshot_json": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "hash_sha256": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Char",
+            "64"
+          ],
+          "enum": null
+        },
+        "diterbitkan_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "dicabut_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "alasan_pencabutan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "dicabut_oleh_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "token"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_pengajuan",
+          "table": "pengajuan_judul",
+          "target": "id"
+        },
+        {
+          "column": "id_bimbingan",
+          "table": "bimbingan",
+          "target": "id"
+        },
+        {
+          "column": "id_sempro",
+          "table": "pendaftaran_sempro",
+          "target": "id"
+        },
+        {
+          "column": "id_jadwal",
+          "table": "jadwal_sempro",
+          "target": "id"
+        },
+        {
+          "column": "id_sidang",
+          "table": "pendaftaran_sidang",
+          "target": "id"
+        },
+        {
+          "column": "id_jadwal_sidang",
+          "table": "jadwal_sidang",
+          "target": "id"
+        },
+        {
+          "column": "penandatangan_user_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "dicabut_oleh_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "digantikan_oleh_id",
+          "table": "dokumen_verifikasi",
+          "target": "id"
+        }
+      ]
+    },
+    "notifikasi": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "pengguna_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "jenis_event": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "kanal": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "status_kirim": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"pending\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "waktu_kirim": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "pengguna_id",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "notifications": {
+      "columns": {
+        "id": {
+          "type": "String",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [
+            "Uuid",
+            null
+          ],
+          "enum": null
+        },
+        "type": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "notifiable_type": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "notifiable_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "data": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "read_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": []
+    },
+    "academic_receipts": {
+      "columns": {
+        "key": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Uuid",
+            null
+          ],
+          "enum": null
+        },
+        "actor_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "command": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "80"
+          ],
+          "enum": null
+        },
+        "fingerprint": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Char",
+            "64"
+          ],
+          "enum": null
+        },
+        "result": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [
+            "Timestamptz",
+            "3"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "key"
+      ],
+      "unique": [],
+      "foreignKeys": []
+    },
+    "pendaftaran_sempro": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "siklus_ke": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "id_pengajuan": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_dosen_pembimbing_sempro": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_acc": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status_draft": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"draft\"",
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "status_berkas": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"draft\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "catatan_verifikasi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "n_final": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "syarat_final": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "terkumpul_final": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status_final": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "dikunci_pada": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "dispensasi_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "tanggal_daftar": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "tanggal_submit": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "id_pengajuan"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_pengajuan",
+          "table": "pengajuan_judul",
+          "target": "id"
+        },
+        {
+          "column": "id_dosen_pembimbing_sempro",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "dispensasi_id",
+          "table": "dispensasi_kehadiran_sempro",
+          "target": "id"
+        }
+      ]
+    },
+    "checklist_dokumen": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_sempro": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_sidang_daftar": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "nomor_item": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "nama_dokumen": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "deskripsi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "jenis_bentuk": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"asli\"",
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "verifikator_role": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"kaprodi\"",
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "file_pindaian": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "status_unggahan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "status_item": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"kosong\"",
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "catatan_verifikator": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "last_verifier_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "last_verifier_role": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "tenggat_pasca_sempro": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "id_sempro",
+          "table": "pendaftaran_sempro",
+          "target": "id"
+        },
+        {
+          "column": "id_sidang_daftar",
+          "table": "pendaftaran_sidang",
+          "target": "id"
+        }
+      ]
+    },
+    "penugasan_penguji": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_dosen_penguji": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_sempro": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_sidang_daftar": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "nomor_penguji": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "jenis": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"sempro\"",
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "peran": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"anggota\"",
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "status_approval": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"menunggu\"",
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "catatan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "is_pengganti": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "nilai_presentasi": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "nilai_alat_bantu": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "nilai_penampilan": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "nilai_penguasaan_materi": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "nilai_kelayakan_proposal": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "nilai_total": {
+          "type": "Decimal",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Decimal",
+            "5, 2"
+          ],
+          "enum": null
+        },
+        "catatan_penilaian": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status_dinilai": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "tanggal_dinilai": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "perlu_revisi": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "catatan_revisi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status_izin_susulan": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"tidak_ada\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "izin_berlaku_sampai": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "alasan_susulan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "id_sempro",
+          "table": "pendaftaran_sempro",
+          "target": "id"
+        },
+        {
+          "column": "id_dosen_penguji",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "id_sidang_daftar",
+          "table": "pendaftaran_sidang",
+          "target": "id"
+        }
+      ]
+    },
+    "jadwal_sempro": {
+      "columns": {
+        "status_konfirmasi_pembimbing_1": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "status_konfirmasi_pembimbing_2": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "status_konfirmasi_penguji": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "alasan_perubahan_pembimbing_1": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan_perubahan_pembimbing_2": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan_perubahan_penguji": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_sempro": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "versi": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "tanggal": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Date",
+            null
+          ],
+          "enum": null
+        },
+        "waktu_mulai": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "waktu_selesai": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "ruang": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"draft\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "status_konfirmasi_dosen": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"menunggu\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "status_pelaksanaan": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"terjadwal\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "diterbitkan_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "revisi_undangan": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "0",
+          "native": [],
+          "enum": null
+        },
+        "catatan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "id_sempro"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_sempro",
+          "table": "pendaftaran_sempro",
+          "target": "id"
+        }
+      ]
+    },
+    "konfirmasi_jadwal_sempro": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "jadwal_sempro_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "versi": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [],
+          "enum": null
+        },
+        "dosen_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "peran": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"menunggu\"",
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "ditetapkan_kaprodi": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "catatan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "usulan_jadwal": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "responded_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "jadwal_sempro_id",
+          "versi",
+          "dosen_id"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "jadwal_sempro_id",
+          "table": "jadwal_sempro",
+          "target": "id"
+        },
+        {
+          "column": "dosen_id",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "riwayat_jadwal_sempro": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "jadwal_sempro_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "versi": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "tanggal": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Date",
+            null
+          ],
+          "enum": null
+        },
+        "jam_mulai": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "jam_selesai": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "ruang": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        },
+        "alasan_perubahan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "diubah_oleh": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "jadwal_sempro_id",
+          "table": "jadwal_sempro",
+          "target": "id"
+        },
+        {
+          "column": "diubah_oleh",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "kehadiran_seminar": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_jadwal": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_mahasiswa": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "path_foto": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "is_manual": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "ditambahkan_oleh_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "catatan_manual": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "waktu_ambil": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"valid\"",
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "id_penolak": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan_penolakan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "id_jadwal",
+          "id_mahasiswa"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_jadwal",
+          "table": "jadwal_sempro",
+          "target": "id"
+        },
+        {
+          "column": "id_mahasiswa",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "ditambahkan_oleh_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "id_penolak",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "dispensasi_kehadiran_sempro": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "pendaftaran_sempro_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "mahasiswa_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"menunggu\"",
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "diputuskan_oleh": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "peran_pemutus": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "alasan_keputusan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "diputuskan_pada": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "syarat_saat_pengajuan": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "0",
+          "native": [],
+          "enum": null
+        },
+        "terkumpul_saat_pengajuan": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "0",
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "pendaftaran_sempro_id",
+          "table": "pendaftaran_sempro",
+          "target": "id"
+        },
+        {
+          "column": "mahasiswa_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "diputuskan_oleh",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "berita_acara": {
+      "columns": {
+        "status_izin_susulan_pembimbing": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "izin_pembimbing_berlaku_sampai": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "alasan_susulan_pembimbing": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "catatan_keputusan_kaprodi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "pembimbing_perlu_revisi": {
+          "type": "Boolean",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "catatan_revisi_pembimbing": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "jenis": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"sempro\"",
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "nilai_pembimbing": {
+          "type": "Decimal",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Decimal",
+            "5, 2"
+          ],
+          "enum": null
+        },
+        "predikat_huruf": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "5"
+          ],
+          "enum": null
+        },
+        "saran_hasil": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "is_override_saran": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "alasan_override": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "ditetapkan_oleh_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "ditetapkan_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "is_locked": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "snapshot_keputusan": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "snapshot_data": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "source_hasil": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "source_status_persetujuan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "transform_provenance": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_jadwal": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_jadwal_sidang": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "penguji_1_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "file_scan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "nilai_presentasi": {
+          "type": "Decimal",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Decimal",
+            "5, 2"
+          ],
+          "enum": null
+        },
+        "nilai_penguasaan_materi": {
+          "type": "Decimal",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Decimal",
+            "5, 2"
+          ],
+          "enum": null
+        },
+        "nilai_metodologi": {
+          "type": "Decimal",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Decimal",
+            "5, 2"
+          ],
+          "enum": null
+        },
+        "nilai_alat_bantu": {
+          "type": "Decimal",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Decimal",
+            "5, 2"
+          ],
+          "enum": null
+        },
+        "nilai_penampilan": {
+          "type": "Decimal",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Decimal",
+            "5, 2"
+          ],
+          "enum": null
+        },
+        "nilai_kelayakan_proposal": {
+          "type": "Decimal",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Decimal",
+            "5, 2"
+          ],
+          "enum": null
+        },
+        "nilai_penguji_1": {
+          "type": "Decimal",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Decimal",
+            "5, 2"
+          ],
+          "enum": null
+        },
+        "nilai_penguji_2": {
+          "type": "Decimal",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Decimal",
+            "5, 2"
+          ],
+          "enum": null
+        },
+        "nilai_akhir_penguji": {
+          "type": "Decimal",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Decimal",
+            "5, 2"
+          ],
+          "enum": null
+        },
+        "catatan_penguji_1_input": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "catatan_penguji_2_input": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "nilai_pembimbing_presentasi": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "nilai_pembimbing_alat_bantu": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "nilai_pembimbing_penampilan": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "nilai_pembimbing_penguasaan_materi": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "nilai_pembimbing_kelayakan_proposal": {
+          "type": "Int",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "nilai_pembimbing_total": {
+          "type": "Decimal",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Decimal",
+            "5, 2"
+          ],
+          "enum": null
+        },
+        "catatan_pembimbing": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status_dinilai_pembimbing": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "tanggal_dinilai_pembimbing": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "nilai": {
+          "type": "Decimal",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Decimal",
+            "5, 2"
+          ],
+          "enum": null
+        },
+        "keputusan_penguji_1": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "catatan_penguji_1": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "tenggat_revisi_penguji_1": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Date",
+            null
+          ],
+          "enum": null
+        },
+        "diputuskan_penguji_1_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "status_persetujuan": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"menunggu_nilai_lengkap\"",
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "disetujui_kaprodi_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "catatan_kaprodi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "hasil": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "catatan_revisi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "tenggat_revisi": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Date",
+            null
+          ],
+          "enum": null
+        },
+        "status_revisi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "bukti_kehadiran": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "berita_acara": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "id_jadwal"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_jadwal",
+          "table": "jadwal_sempro",
+          "target": "id"
+        },
+        {
+          "column": "id_jadwal_sidang",
+          "table": "jadwal_sidang",
+          "target": "id"
+        },
+        {
+          "column": "penguji_1_id",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "revisi_dokumen": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "tipe": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"sempro\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "berita_acara_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "mahasiswa_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "versi": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [],
+          "enum": null
+        },
+        "file_draft": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "file_nama_asli": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "file_ukuran_bytes": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"menunggu_persetujuan\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "catatan_mahasiswa": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "persetujuan": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan_penolakan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "ditolak_oleh_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "disetujui_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "ditolak_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "berita_acara_id",
+          "table": "berita_acara",
+          "target": "id"
+        },
+        {
+          "column": "mahasiswa_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "ditolak_oleh_id",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "nomor_surat_dasar": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_pengajuan": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "tahun": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "nomor_urut": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "tanggal_alokasi": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "id_pengajuan"
+        ],
+        [
+          "tahun",
+          "nomor_urut"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_pengajuan",
+          "table": "pengajuan_judul",
+          "target": "id"
+        }
+      ]
+    },
+    "nomor_surat_kategori": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_nomor_dasar": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "kategori": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "nomor_lengkap": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        },
+        "bulan_romawi": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "tahun": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "tanggal_terbit": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Date",
+            null
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "nomor_lengkap"
+        ],
+        [
+          "id_nomor_dasar",
+          "kategori"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_nomor_dasar",
+          "table": "nomor_surat_dasar",
+          "target": "id"
+        }
+      ]
+    },
+    "pendaftaran_sidang": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_pengajuan": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_dosen_pembimbing_sidang": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "siklus_ke": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "ipk": {
+          "type": "Decimal",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Decimal",
+            "3, 2"
+          ],
+          "enum": null
+        },
+        "file_transkrip": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "file_naskah": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "status_draft": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"draft\"",
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "status_berkas": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"draft\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "catatan_verifikasi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "tanggal_daftar": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "tanggal_submit": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "diverifikasi_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "diverifikasi_oleh_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status_fisik": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "periode_snapshot": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "id_pengajuan",
+          "table": "pengajuan_judul",
+          "target": "id"
+        },
+        {
+          "column": "id_dosen_pembimbing_sidang",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "diverifikasi_oleh_id",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "pembayaran_sidang": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_pendaftaran_sidang": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_mahasiswa": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_admin_keuangan": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "siklus_ke": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "periode": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        },
+        "file_kwitansi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "file_krs_ska": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "file_bukti_transfer": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "tanggal_transfer": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Date",
+            null
+          ],
+          "enum": null
+        },
+        "nama_pengirim": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "pernah_ambil_skripsi_sebelumnya": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "jumlah_semester_sebelumnya": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "0",
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "berkas_semester_sebelumnya": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status_verifikasi": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"menunggu_verifikasi\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "catatan_penolakan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "perlu_verifikasi_ulang": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "id_pendaftaran_sidang",
+          "table": "pendaftaran_sidang",
+          "target": "id"
+        },
+        {
+          "column": "id_mahasiswa",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "id_admin_keuangan",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "jadwal_sidang": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_sidang": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "versi": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"draft\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "tanggal": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Date",
+            null
+          ],
+          "enum": null
+        },
+        "waktu_mulai": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "waktu_selesai": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "ruang": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"Ruang Seminar FRS\"",
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "diterbitkan_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "revisi_undangan": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "0",
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "status_konfirmasi_dosen": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"menunggu\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "status_pelaksanaan": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"terjadwal\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "penguji_dikonfirmasi_ulang": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "dewan_snapshot": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "periode_snapshot": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "id_sidang",
+          "table": "pendaftaran_sidang",
+          "target": "id"
+        }
+      ]
+    },
+    "konfirmasi_jadwal_sidang": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "jadwal_sidang_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "versi": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "dosen_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "peran": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"menunggu\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "tipe_penolakan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "id_dosen_pengganti_usulan": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "usulan_tanggal": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Date",
+            null
+          ],
+          "enum": null
+        },
+        "usulan_waktu_mulai": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "usulan_waktu_selesai": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "slot_usulan": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "catatan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "ditetapkan_kaprodi": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "responded_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "jadwal_sidang_id",
+          "table": "jadwal_sidang",
+          "target": "id"
+        },
+        {
+          "column": "dosen_id",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "riwayat_jadwal_sidang": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "jadwal_sidang_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "versi": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "tanggal": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Date",
+            null
+          ],
+          "enum": null
+        },
+        "jam_mulai": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "jam_selesai": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "ruang": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "alasan_perubahan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "diubah_oleh": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": [
+        {
+          "column": "jadwal_sidang_id",
+          "table": "jadwal_sidang",
+          "target": "id"
+        }
+      ]
+    },
+    "permohonan_sidang": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "jadwal_sidang_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "konfirmasi_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "versi_jadwal": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [],
+          "enum": null
+        },
+        "jenis": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "pemohon_tipe": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "pemohon_user_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "dosen_pengganti_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "slot_usulan": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"menunggu\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "aktif_key": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        },
+        "keputusan_oleh": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan_keputusan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "diputuskan_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "aktif_key"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "jadwal_sidang_id",
+          "table": "jadwal_sidang",
+          "target": "id"
+        },
+        {
+          "column": "konfirmasi_id",
+          "table": "konfirmasi_jadwal_sidang",
+          "target": "id"
+        }
+      ]
+    },
+    "rubrik_penilaian": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "jenis": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"sidang\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "kode": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "10"
+          ],
+          "enum": null
+        },
+        "komponen": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "bobot": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "keterangan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "urutan": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": "1",
+          "native": [
+            "SmallInt",
+            null
+          ],
+          "enum": null
+        },
+        "is_aktif": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "true",
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": []
+    },
+    "penilaian_sidang": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "id_jadwal_sidang": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "penilai_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "peran": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "nilai_komponen": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "nilai_akhir": {
+          "type": "Decimal",
+          "nullable": false,
+          "generated": false,
+          "default": "0",
+          "native": [
+            "Decimal",
+            "5, 2"
+          ],
+          "enum": null
+        },
+        "perlu_revisi": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "catatan_revisi": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "catatan_umum": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"draft\"",
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "disimpan_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "izin_susulan": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "izin_berlaku_sampai": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "diizinkan_oleh_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "rubrik_snapshot": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "id_jadwal_sidang",
+          "penilai_id"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_jadwal_sidang",
+          "table": "jadwal_sidang",
+          "target": "id"
+        },
+        {
+          "column": "penilai_id",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "pengumuman": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "judul": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "150"
+          ],
+          "enum": null
+        },
+        "isi": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "lampiran_path": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "500"
+          ],
+          "enum": null
+        },
+        "lampiran_nama": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "255"
+          ],
+          "enum": null
+        },
+        "kategori": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"umum\"",
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "target_peran": {
+          "type": "Json",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "is_publik": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": "\"draft\"",
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "disematkan": {
+          "type": "Boolean",
+          "nullable": false,
+          "generated": false,
+          "default": "false",
+          "native": [],
+          "enum": null
+        },
+        "tampil_mulai": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "tampil_selesai": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "dibuat_oleh": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "diubah_oleh": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "terbit_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "notifikasi_dikirim_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "deleted_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": []
+    },
+    "pengumuman_dibaca": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "pengumuman_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "pengguna_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "dibaca_at": {
+          "type": "DateTime",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "pengumuman_id",
+          "pengguna_id"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "pengumuman_id",
+          "table": "pengumuman",
+          "target": "id"
+        },
+        {
+          "column": "pengguna_id",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "permohonan_sempro": {
+      "columns": {
+        "id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": true,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "jadwal_sempro_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "konfirmasi_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "versi_jadwal": {
+          "type": "Int",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "jenis": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "pemohon_tipe": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "20"
+          ],
+          "enum": null
+        },
+        "pemohon_user_id": {
+          "type": "BigInt",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "dosen_pengganti_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "slot_usulan": {
+          "type": "Json",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "status": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "30"
+          ],
+          "enum": null
+        },
+        "aktif_key": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "50"
+          ],
+          "enum": null
+        },
+        "keputusan_oleh": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "alasan_keputusan": {
+          "type": "String",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "diputuskan_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "created_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        },
+        "updated_at": {
+          "type": "DateTime",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Timestamp",
+            "0"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [
+        [
+          "aktif_key"
+        ]
+      ],
+      "foreignKeys": [
+        {
+          "column": "jadwal_sempro_id",
+          "table": "jadwal_sempro",
+          "target": "id"
+        },
+        {
+          "column": "konfirmasi_id",
+          "table": "konfirmasi_jadwal_sempro",
+          "target": "id"
+        },
+        {
+          "column": "pemohon_user_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "dosen_pengganti_id",
+          "table": "pengguna",
+          "target": "id"
+        },
+        {
+          "column": "keputusan_oleh",
+          "table": "pengguna",
+          "target": "id"
+        }
+      ]
+    },
+    "legacy_import_runs": {
+      "columns": {
+        "binding": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Char",
+            "64"
+          ],
+          "enum": null
+        },
+        "snapshot_id": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        },
+        "snapshot_checksum": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Char",
+            "64"
+          ],
+          "enum": null
+        },
+        "mapping_version": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "binding"
+      ],
+      "unique": [
+        [
+          "snapshot_id"
+        ]
+      ],
+      "foreignKeys": []
+    },
+    "legacy_import_checkpoints": {
+      "columns": {
+        "binding": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Char",
+            "64"
+          ],
+          "enum": null
+        },
+        "stage": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        },
+        "checksum": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Char",
+            "64"
+          ],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "binding",
+        "stage"
+      ],
+      "unique": [],
+      "foreignKeys": []
+    },
+    "legacy_import_rows": {
+      "columns": {
+        "source_table": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "100"
+          ],
+          "enum": null
+        },
+        "source_pk": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "500"
+          ],
+          "enum": null
+        },
+        "binding": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Char",
+            "64"
+          ],
+          "enum": null
+        },
+        "source_json": {
+          "type": "Json",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
+        "source_checksum": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Char",
+            "64"
+          ],
+          "enum": null
+        },
+        "provenance": {
+          "type": "Json",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "source_table",
+        "source_pk"
+      ],
+      "unique": [],
+      "foreignKeys": []
+    },
+    "legacy_import_files": {
+      "columns": {
+        "id": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Char",
+            "64"
+          ],
+          "enum": null
+        },
+        "binding": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "Char",
+            "64"
+          ],
+          "enum": null
+        },
+        "disk": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "7"
+          ],
+          "enum": null
+        },
+        "path": {
+          "type": "String",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [
+            "VarChar",
+            "1000"
+          ],
+          "enum": null
+        },
+        "descriptor": {
+          "type": "Json",
+          "nullable": false,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "unique": [],
+      "foreignKeys": []
+    }
+  }
+}

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth/session";
 import { readStoredFile } from "@/lib/academic/files";
 import { canManage } from "@/lib/accounts/policy";
+import { accountTransaction, checkedActor } from "@/lib/accounts/store";
 
 export async function GET(
   _req: NextRequest,
@@ -10,10 +10,11 @@ export async function GET(
 ) {
   const session = await requireSession();
   const { id } = await params;
-  const itemId = BigInt(id);
-
-  const item = await prisma.checklistDokumen.findUnique({
-    where: { id: itemId },
+  if (!/^[1-9]\d{0,18}$/.test(id) || BigInt(id) > 9223372036854775807n) return new NextResponse(null, { status: 404 });
+  const item = await accountTransaction(async (tx) => {
+    const actor = await checkedActor(tx, session), live = await tx.authSession.findUniqueOrThrow({ where: { tokenHash: session.tokenHash } });
+    const item = await tx.checklistDokumen.findUnique({
+    where: { id: BigInt(id) },
     include: {
       sempro: {
         include: {
@@ -22,21 +23,14 @@ export async function GET(
         },
       },
     },
+    });
+    if (!item?.filePindaian || !item.sempro) return null;
+    const sempro = item.sempro, lecturer = actor.dosen && ["dosen", "kaprodi", "sekpro"].includes(actor.role);
+    const isOwner = actor.role === "mahasiswa" && sempro.pengajuan.idMahasiswa === actor.id;
+    const evaluator = lecturer && (sempro.idDosenPembimbingSempro === actor.id || sempro.penguji.some((p) => !p.isPengganti && p.idDosenPenguji === actor.id));
+    return isOwner || evaluator || canManage(actor, live.activeRole) ? item : null;
   });
-
-  if (!item || !item.filePindaian || !item.sempro) {
-    return new NextResponse("Berkas tidak ditemukan.", { status: 404 });
-  }
-
-  const sempro = item.sempro;
-  const isOwner = sempro.pengajuan.idMahasiswa === session.user.id;
-  const isSupervisor = sempro.idDosenPembimbingSempro === session.user.id;
-  const isExaminer = sempro.penguji.some((p: { idDosenPenguji: bigint }) => p.idDosenPenguji === session.user.id);
-  const isManager = canManage(session.user, session.activeRole);
-
-  if (!isOwner && !isSupervisor && !isExaminer && !isManager) {
-    return new NextResponse("Akses ditolak.", { status: 403 });
-  }
+  if (!item?.filePindaian) return new NextResponse("Berkas tidak ditemukan.", { status: 404 });
 
   try {
     const bytes = await readStoredFile(item.filePindaian, ["private", "public"]);

@@ -5,6 +5,7 @@ import { canManage } from "@/lib/accounts/policy";
 import { sidangRecord, canRead } from "@/lib/sidang/store";
 import { revisionComplete } from "@/lib/sidang/policy";
 import { renderSidangPdf } from "@/lib/sidang/documents";
+import { importedDocumentFile, readImportedDocument } from "@/lib/migration/document-files";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ token: string }> }) {
   const session = await requireSession();
@@ -35,10 +36,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
         || actor.dosen && ["dosen", "kaprodi", "sekpro"].includes(actor.role)
         && [title.bimbingan?.idDosenPembimbing, title.bimbingan?.idDosenPembimbing2].includes(actor.id))) return null;
     } else return null;
-    return doc;
+    return { ...doc, historical: await importedDocumentFile(tx, doc) };
   });
   if (!doc) return new NextResponse("Dokumen tidak tersedia untuk Anda.", { status: 404 });
   if (doc.status !== "sah") return new NextResponse("Dokumen telah dicabut atau digantikan. Periksa status pada halaman verifikasi.", { status: 410 });
-  return new NextResponse(new Uint8Array(renderSidangPdf(doc)), { headers: { "Content-Type": "application/pdf",
+  const historical = doc.historical.imported ? await readImportedDocument(doc.historical) : null;
+  if (doc.historical.imported && !historical) return new NextResponse("Berkas dokumen historis belum direkonsiliasi.", { status: 409 });
+  return new NextResponse(new Uint8Array(historical ?? renderSidangPdf(doc)), { headers: { "Content-Type": "application/pdf",
     "Content-Disposition": `inline; filename="${doc.jenisDokumen}_v${doc.versi}.pdf"`, "Cache-Control": "private, no-store" } });
 }

@@ -64,7 +64,7 @@ export async function issueDocument(context: Context, original: Sidang, schedule
 }
 
 export function renderSidangPdf(doc: { jenisDokumen: string; token: string; status: string; versi: number;
-  nomorSurat: string | null; namaPenandatangan: string; snapshotJson: unknown }) {
+  nomorSurat: string | null; namaPenandatangan: string | null; snapshotJson: unknown }) {
   const data = (doc.snapshotJson ?? {}) as Record<string, unknown>;
   // Legacy snapshots use nested mahasiswa/jadwal/nilai/dewan. Render them without rewriting the stored JSON or hash.
   const student = (data.mahasiswa ?? {}) as Record<string, unknown>;
@@ -101,7 +101,7 @@ export function renderSidangPdf(doc: { jenisDokumen: string; token: string; stat
   if (Array.isArray(data.nilaiDewan)) for (const score of data.nilaiDewan) line(score.peran, score.nilai);
   const score = data.score as { peran?: string; nilaiKomponen?: Record<string, string>; nilaiAkhir?: string } | undefined;
   if (score) { line("Peran penilai", score.peran); for (const [code, value] of Object.entries(score.nilaiKomponen ?? {})) line(code, value); line("Nilai akhir", score.nilaiAkhir); }
-  line("Penandatangan", doc.namaPenandatangan);
+  line("Penandatangan", doc.namaPenandatangan ?? "-");
   const origin = process.env.APP_ORIGIN || "http://localhost:3000";
   pdf.drawQrCode(`${origin}/verifikasi/${doc.token}`, 450, 55, 85);
   pdf.drawText("Keaslian, status, dan versi dokumen diperiksa melalui QR SIAS.", 50, 40, 8);
