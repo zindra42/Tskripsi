@@ -1,3 +1,4 @@
+import { affiliation, program } from "./helpers/organization";
 import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import { parseCsv, exportArchiveCsv, importArchiveCsv } from "../src/lib/academic/archive-csv";
@@ -74,10 +75,10 @@ test("CSV export and import round-trip with preprocessing keywords", async () =>
 });
 
 test("isSameProdi and prodi scoping for Kaprodi/Sekpro", () => {
-  assert.equal(isSameProdi("Informatika", "Informatika"), true);
-  assert.equal(isSameProdi("informatika", "INFORMATIKA"), true);
-  assert.equal(isSameProdi("Informatika", "Sistem Informasi"), false);
-  assert.equal(isSameProdi(null, "Informatika"), true);
+  assert.equal(isSameProdi(1n, 1n), true);
+  assert.equal(isSameProdi(2n, 2n), true);
+  assert.equal(isSameProdi(1n, 2n), false);
+  assert.equal(isSameProdi(null, 1n), false);
 
   const kaprodiIF: AccountIdentity = {
     id: 10n,
@@ -85,7 +86,7 @@ test("isSameProdi and prodi scoping for Kaprodi/Sekpro", () => {
     statusAkun: "aktif",
     deletedAt: null,
     wajibGantiPassword: false,
-    dosen: { isKaprodi: true, isSekpro: false, prodi: "Informatika" },
+    dosen: { ...affiliation(), isKaprodi: true, isSekpro: false, prodi: "Informatika" },
   };
 
   const mhsIF: AccountIdentity = {
@@ -95,7 +96,7 @@ test("isSameProdi and prodi scoping for Kaprodi/Sekpro", () => {
     deletedAt: null,
     wajibGantiPassword: false,
     dosen: null,
-    mahasiswa: { prodi: "Informatika" },
+    mahasiswa: { ...affiliation(), prodi: "Informatika" },
   };
 
   const mhsSI: AccountIdentity = {
@@ -105,7 +106,7 @@ test("isSameProdi and prodi scoping for Kaprodi/Sekpro", () => {
     deletedAt: null,
     wajibGantiPassword: false,
     dosen: null,
-    mahasiswa: { prodi: "Sistem Informasi" },
+    mahasiswa: { ...affiliation(2n), prodi: "Sistem Informasi" },
   };
 
   const dosenIF: AccountIdentity = {
@@ -114,7 +115,7 @@ test("isSameProdi and prodi scoping for Kaprodi/Sekpro", () => {
     statusAkun: "menunggu_persetujuan",
     deletedAt: null,
     wajibGantiPassword: false,
-    dosen: { isKaprodi: false, isSekpro: false, prodi: "Informatika" },
+    dosen: { ...affiliation(), isKaprodi: false, isSekpro: false, prodi: "Informatika" },
   };
 
   const dosenSI: AccountIdentity = {
@@ -123,7 +124,7 @@ test("isSameProdi and prodi scoping for Kaprodi/Sekpro", () => {
     statusAkun: "menunggu_persetujuan",
     deletedAt: null,
     wajibGantiPassword: false,
-    dosen: { isKaprodi: false, isSekpro: false, prodi: "Sistem Informasi" },
+    dosen: { ...affiliation(2n), isKaprodi: false, isSekpro: false, prodi: "Sistem Informasi" },
   };
 
   // Kaprodi IF can manage mahasiswa and dosen from Informatika
@@ -162,7 +163,7 @@ test("assertSingleKaprodi allows distinct Kaprodi in different prodi", async (t)
     role: string;
     statusAkun: string;
     deletedAt: Date | null;
-    dosen: { isKaprodi: boolean; prodi: string };
+    dosen: { isKaprodi: boolean; programStudiId: bigint };
   };
   const users: KaprodiUser[] = [
     {
@@ -170,7 +171,7 @@ test("assertSingleKaprodi allows distinct Kaprodi in different prodi", async (t)
       role: "kaprodi",
       statusAkun: "aktif",
       deletedAt: null,
-      dosen: { isKaprodi: true, prodi: "Informatika" },
+      dosen: { isKaprodi: true, programStudiId: 1n },
     },
   ];
 
@@ -179,18 +180,19 @@ test("assertSingleKaprodi allows distinct Kaprodi in different prodi", async (t)
       deletedAt?: Date | null;
       statusAkun?: string;
       id?: { not?: bigint };
-      dosen?: { prodi?: string };
+      dosen?: { programStudiId?: bigint };
     };
   };
 
   const mockTx = {
+    programStudi: { findUnique: async ({ where }: { where: { id: bigint } }) => program(where.id) },
     pengguna: {
       findFirst: async ({ where }: FindFirstArgs) => {
         return users.find((u) => {
-          if (where.deletedAt !== u.deletedAt) return false;
-          if (where.statusAkun !== u.statusAkun) return false;
+          if (where.deletedAt !== undefined && where.deletedAt !== u.deletedAt) return false;
+          if (where.statusAkun !== undefined && where.statusAkun !== u.statusAkun) return false;
           if (where.id?.not && where.id.not === u.id) return false;
-          if (where.dosen?.prodi && u.dosen.prodi !== where.dosen.prodi) return false;
+          if (where.dosen?.programStudiId && u.dosen.programStudiId !== where.dosen.programStudiId) return false;
           return true;
         }) ?? null;
       },
@@ -199,12 +201,12 @@ test("assertSingleKaprodi allows distinct Kaprodi in different prodi", async (t)
 
   // Another Kaprodi for Informatika should be rejected
   await assert.rejects(
-    assertSingleKaprodi(mockTx, undefined, "Informatika"),
-    /Sudah ada Kaprodi aktif untuk program studi Informatika/,
+    assertSingleKaprodi(mockTx, undefined, 1n),
+    /Sudah ada Kaprodi aktif untuk program studi 1/,
   );
 
   // But a Kaprodi for Sistem Informasi should be allowed!
   await assert.doesNotReject(
-    assertSingleKaprodi(mockTx, undefined, "Sistem Informasi"),
+    assertSingleKaprodi(mockTx, undefined, 2n),
   );
 });

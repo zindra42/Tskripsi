@@ -21,8 +21,8 @@ export function profileValues(user: Account) {
   const lecturer = ["dosen", "kaprodi", "sekpro"].includes(user.role) ? user.dosen : null;
   return {
     nama: user.nama, email: user.email,
-    ...(student ? { nim: student.nim, semester: student.semester, noHp: student.noHp } : {}),
-    ...(lecturer ? { nidn: lecturer.nidn, noHp: lecturer.noHp, bidang: lecturer.keahlian.map((item) => item.bidangId.toString()) } : {}),
+    ...(student ? { programStudiId: student.programStudiId?.toString() ?? null, nim: student.nim, semester: student.semester, noHp: student.noHp } : {}),
+    ...(lecturer ? { programStudiId: lecturer.programStudiId?.toString() ?? null, nidn: lecturer.nidn, noHp: lecturer.noHp, bidang: lecturer.keahlian.map((item) => item.bidangId.toString()) } : {}),
   };
 }
 

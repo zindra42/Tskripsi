@@ -50,7 +50,7 @@ export function ExpertiseFields({ options, selected = [], other = false }: { opt
   </fieldset>;
 }
 
-export function RegistrationForm({ options, admin = false }: { options: ExpertiseOption[]; admin?: boolean }) {
+export function RegistrationForm({ options, programs = [], admin = false }: { options: ExpertiseOption[]; programs?: ProgramOption[]; admin?: boolean }) {
   const [role, setRole] = useState<Role>("mahasiswa");
   const roles: Role[] = admin ? ["mahasiswa", "dosen", "kaprodi", "sekpro"] : ["mahasiswa", "dosen", "admin_keuangan"];
   const lecturer = ["dosen", "kaprodi", "sekpro"].includes(role);
@@ -60,8 +60,9 @@ export function RegistrationForm({ options, admin = false }: { options: Expertis
     {!admin && <><Field name="password" label="Password" type="password" /><Field name="confirmation" label="Konfirmasi password" type="password" /></>}
     {role === "mahasiswa" && <><Field name="nim" label="NIM" /><Field name="semester" label="Semester sesuai NIM dan periode aktif (7–14)" type="number" min={7} max={14} /></>}
     {(role === "mahasiswa" || lecturer) && <Field name="noHp" label="Nomor HP (08, total 10–13 digit)" type="tel" />}
+    {(role === "mahasiswa" || lecturer) && <ProgramSelect options={programs} />}
     {lecturer && <><Field name="nidn" label="NIDN" /><ExpertiseFields options={options} other />
-      {!admin && <label className="flex items-center gap-2"><input type="checkbox" name="isSekpro" />Mengajukan akun Sekretaris Prodi</label>}</>}
+      {!admin && <p className="text-sm text-slate-600">Jabatan pimpinan ditetapkan Dekan atau superadmin setelah akun aktif.</p>}</>}
     {admin && role === "kaprodi" && <Field name="confirmation" label="Ketik KONFIRMASI" />}
   </ActionForm>;
 }
@@ -79,8 +80,8 @@ export function RecoveryForms() {
   </div>;
 }
 
-export type ProfileValues = { nama: string; email: string | null; nim?: string | null; nidn?: string | null; semester?: number; noHp?: string | null; bidang?: string[] };
-export function ProfileFields({ values, options }: { values: ProfileValues; options: ExpertiseOption[] }) {
+export type ProfileValues = { programStudiId?: string | null; nama: string; email: string | null; nim?: string | null; nidn?: string | null; semester?: number; noHp?: string | null; bidang?: string[] };
+export function ProfileFields({ values, options, programs = [] }: { values: ProfileValues; options: ExpertiseOption[]; programs?: ProgramOption[] }) {
   const fields = [["nama", "Nama lengkap", "text"], ["email", "Email", "email"],
     ...(values.semester !== undefined ? [["nim", "NIM", "text"], ["semester", "Semester (1–14)", "number"]] : []),
     ...(values.nidn !== undefined ? [["nidn", "NIDN", "text"]] : []),
@@ -89,9 +90,15 @@ export function ProfileFields({ values, options }: { values: ProfileValues; opti
     <label className="flex items-center gap-2"><input type="checkbox" name="changes" value={key} />Ubah {label.toLowerCase()}</label>
     <Field name={key} label={label} type={type} value={values[key as keyof ProfileValues] as string | number | null} required={false} min={key === "semester" ? 1 : undefined} max={key === "semester" ? 14 : undefined} />
   </div>)}
+    {values.programStudiId !== undefined && <div className="rounded-lg border border-slate-200 p-4"><label className="flex gap-2"><input type="checkbox" name="changes" value="programStudiId" />Ubah afiliasi program studi</label><ProgramSelect options={programs} value={values.programStudiId} required={false} /></div>}
     {values.bidang !== undefined && <div className="rounded-lg border border-slate-200 p-4">
       <label className="flex items-center gap-2"><input type="checkbox" name="changes" value="bidang" />Ubah bidang keahlian</label>
       <ExpertiseFields options={options} selected={values.bidang} />
     </div>}
   </div>;
+}
+
+export type ProgramOption = { id: string; label: string };
+export function ProgramSelect({ options, value, required = true }: { options: ProgramOption[]; value?: string | null; required?: boolean }) {
+  return <label>Fakultas / Program studi<select name="programStudiId" required={required} defaultValue={value ?? ""}><option value="">Pilih program studi aktif</option>{options.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select>{!options.length && <span className="text-sm text-amber-900">Belum ada prodi aktif. Hubungi superadmin.</span>}</label>;
 }

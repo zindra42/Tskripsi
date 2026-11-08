@@ -1,3 +1,4 @@
+import { affiliation } from "./helpers/organization";
 import assert from "node:assert/strict";
 import test, { mock } from "node:test";
 import { randomUUID } from "node:crypto";
@@ -23,9 +24,9 @@ const row = (value: unknown) => value as Row;
 
 function user(id: bigint, role: Account["role"]): Account {
   return { id, role, nama: `User ${id}`, email: `user${id}@example.invalid`, emailArsip: null, statusAkun: "aktif", deletedAt: null,
-    authVersion: 0, wajibGantiPassword: false, catatanPenolakan: null, dibuatOlehSuperAdmin: false,
-    mahasiswa: role === "mahasiswa" ? { penggunaId: id, nim: `22001${id}`, nimArsip: null, semester: 9, prodi: "Informatika", noHp: null, createdAt: null, updatedAt: null } : null,
-    dosen: ["dosen", "kaprodi", "sekpro"].includes(role) ? { penggunaId: id, nidn: `12345${id}`, nidnArsip: null, noHp: null, kuotaBimbingan: 1, prodi: "Informatika",
+    fakultasId: null, fakultas: null, authVersion: 0, wajibGantiPassword: false, catatanPenolakan: null, dibuatOlehSuperAdmin: false,
+    mahasiswa: role === "mahasiswa" ? { penggunaId: id, nim: `22001${id}`, nimArsip: null, semester: 9, ...affiliation(), prodi: "Informatika", noHp: null, createdAt: null, updatedAt: null } : null,
+    dosen: ["dosen", "kaprodi", "sekpro"].includes(role) ? { penggunaId: id, nidn: `12345${id}`, nidnArsip: null, noHp: null, kuotaBimbingan: 1, ...affiliation(), prodi: "Informatika",
       isKaprodi: role === "kaprodi", isSekpro: role === "sekpro", keahlian: [], createdAt: null, updatedAt: null } : null };
 }
 
@@ -153,7 +154,7 @@ test("preprocessing dan Jaccard mengikuti contoh sumber Indonesia", () => {
   assert.equal(jaccard(["a", "b"], ["b", "c"]), 33);
   assert.equal(jaccard([], ["a"]), 0);
   const title = "Rancang Bangun Sistem Informasi Pendaftaran Seminar Berbasis Web";
-  const corpus = [{ id: 9007199254740993n, judul: title, namaPenulis: "Penulis", nim: "211001062", tahun: "2025", prodi: "Informatika", keywords: JSON.stringify(preprocess(title, true)) }];
+  const corpus = [{ id: 9007199254740993n, judul: title, namaPenulis: "Penulis", nim: "211001062", tahun: "2025", ...affiliation(), prodi: "Informatika", keywords: JSON.stringify(preprocess(title, true)) }];
   const result = similarity(title, corpus);
   assert.equal(result.skor, 100);
   assert.equal(result.top[0].id, "9007199254740993");
@@ -462,7 +463,7 @@ test("alur akademik menjalankan layanan dan entry point aktual dengan database s
     await run(3, (context) => decideChange(context, { id: firstId, reason: "Ruang lingkup belum sesuai" }, false, false));
     assert.equal(title().judul, titleInput.judul);
     fixture.tables.arsipJudulSkripsi.push({ id: 9007199254740993n, judul: changeInput.judul, namaPenulis: "Alumni Uji",
-      nim: null, tahun: "2025", prodi: "Informatika", keywords: preprocess(changeInput.judul) });
+      nim: null, tahun: "2025", ...affiliation(), prodi: "Informatika", keywords: preprocess(changeInput.judul) });
     await run(0, (context) => submitChange(context, changeInput));
     const secondId = String(fixture.tables.pengajuanPerubahanJudul[1].id);
     await Promise.all([run(3, (context) => decideChange(context, { id: secondId }, true, false)), run(4, (context) => decideChange(context, { id: secondId }, true, false))]);

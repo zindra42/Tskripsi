@@ -1,4 +1,5 @@
 import type { Role } from "@/generated/prisma/enums";
+import { activeProgramId, type Affiliation } from "@/lib/organization/policy";
 
 export const roleLabels: Record<Role, string> = {
   mahasiswa: "Mahasiswa",
@@ -7,6 +8,7 @@ export const roleLabels: Record<Role, string> = {
   sekpro: "Sekretaris Program Studi",
   admin_keuangan: "Admin Keuangan",
   superadmin: "Super Admin",
+  dekan: "Dekan",
 };
 
 export type AccountPolicy = {
@@ -14,17 +16,19 @@ export type AccountPolicy = {
   statusAkun: string;
   deletedAt: Date | null;
   wajibGantiPassword: boolean;
-  dosen: { isKaprodi: boolean; isSekpro: boolean; prodi?: string | null } | null;
-  mahasiswa?: { prodi?: string | null } | null;
+  fakultasId?: bigint | null;
+  fakultas?: { aktif: boolean } | null;
+  dosen: (Affiliation & { isKaprodi: boolean; isSekpro: boolean; prodi?: string | null }) | null;
+  mahasiswa?: (Affiliation & { prodi?: string | null }) | null;
 };
 
 export function availableRoles(user: AccountPolicy): Role[] {
-  const roles: Role[] = [user.role];
-  if (user.role === "dosen" && user.dosen?.isKaprodi) roles.unshift("kaprodi");
-  if (user.role === "dosen" && user.dosen?.isSekpro) {
-    roles.splice(user.dosen.isKaprodi ? 1 : 0, 0, "sekpro");
-  }
-  if ((user.role === "kaprodi" || user.role === "sekpro") && user.dosen) roles.push("dosen");
+  if (!["dosen", "kaprodi", "sekpro"].includes(user.role)) return [user.role];
+  const roles: Role[] = ["dosen"];
+  if (!activeProgramId(user.dosen)) return roles;
+  if (user.role === "kaprodi" || user.role === "sekpro") return [user.role, "dosen"];
+  if (user.dosen?.isKaprodi) roles.unshift("kaprodi");
+  if (user.dosen?.isSekpro) roles.splice(roles.includes("kaprodi") ? 1 : 0, 0, "sekpro");
   return roles;
 }
 

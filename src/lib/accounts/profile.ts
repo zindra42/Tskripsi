@@ -1,4 +1,6 @@
 import "server-only";
+import { activeProgram, hasLeadership } from "@/lib/organization/store";
+import { canDecideAccount } from "./policy";
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import type { AuthenticatedSession } from "@/lib/auth/session";
@@ -11,20 +13,23 @@ function checkProfileRole(user: Account, data: ProfileChanges) {
   ensure(user.deletedAt === null && user.statusAkun === "aktif", "Akun harus aktif.");
   if (user.role === "mahasiswa") ensure(user.mahasiswa && data.nidn === undefined && data.bidang === undefined, "Kolom perubahan tidak sesuai profil mahasiswa.");
   else if (user.dosen && ["dosen", "kaprodi", "sekpro"].includes(user.role)) ensure(data.nim === undefined && data.semester === undefined, "Kolom perubahan tidak sesuai profil dosen.");
-  else ensure(data.nim === undefined && data.nidn === undefined && data.bidang === undefined && data.semester === undefined && data.noHp === undefined, "Kolom perubahan tidak sesuai jenis akun.");
+  else ensure(data.programStudiId === undefined && data.nim === undefined && data.nidn === undefined && data.bidang === undefined && data.semester === undefined && data.noHp === undefined, "Kolom perubahan tidak sesuai jenis akun.");
 }
 
 async function applyProfile(tx: Tx, user: Account, data: ProfileChanges) {
   checkProfileRole(user, data);
+  const program = data.programStudiId !== undefined ? await activeProgram(tx, data.programStudiId) : null;
+  const profile = user.role === "mahasiswa" ? user.mahasiswa : user.dosen;
+  if (program) ensure(!hasLeadership(user) || profile?.programStudiId === program.id, "Berhentikan jabatan sebelum memindahkan afiliasi.");
   await assertIdentities(tx, user.id, data);
   await tx.pengguna.update({ where: { id: user.id }, data: { nama: data.nama, email: data.email, updatedAt: new Date() } });
   if (user.role === "mahasiswa") {
-    await tx.mahasiswa.update({ where: { penggunaId: user.id }, data: { nim: data.nim, semester: data.semester, prodi: data.prodi, noHp: data.noHp, updatedAt: new Date() } });
+    await tx.mahasiswa.update({ where: { penggunaId: user.id }, data: { nim: data.nim, semester: data.semester, programStudiId: program?.id, prodi: program?.nama, noHp: data.noHp, updatedAt: new Date() } });
   } else if (user.dosen) {
-    await tx.dosen.update({ where: { penggunaId: user.id }, data: { nidn: data.nidn, prodi: data.prodi, noHp: data.noHp, updatedAt: new Date() } });
+    await tx.dosen.update({ where: { penggunaId: user.id }, data: { nidn: data.nidn, programStudiId: program?.id, prodi: program?.nama, noHp: data.noHp, updatedAt: new Date() } });
     if (data.bidang) await syncExpertise(tx, user.id, data.bidang);
   }
-  if (data.email !== undefined && data.email !== user.email) await invalidateSessions(tx, user.id);
+  if ((program && program.id !== profile?.programStudiId) || (data.email !== undefined && data.email !== user.email)) await invalidateSessions(tx, user.id);
 }
 
 export async function editAccountProfile(session: AuthenticatedSession, id: bigint, input: unknown, reason: string) {
@@ -56,6 +61,7 @@ export async function submitProfileRequest(session: AuthenticatedSession, input:
     const user = await checkedActor(tx, session);
     ensure(user.role === "mahasiswa" || (user.dosen && ["dosen", "kaprodi", "sekpro"].includes(user.role)), "Akun ini tidak mempunyai profil akademik.");
     checkProfileRole(user, data);
+    if (data.programStudiId !== undefined) { await activeProgram(tx, data.programStudiId); ensure(!hasLeadership(user), "Berhentikan jabatan sebelum mengajukan perubahan afiliasi."); }
     await assertIdentities(tx, user.id, data);
     if (data.bidang) ensure(await tx.bidangKeahlian.count({ where: { id: { in: data.bidang } } }) === data.bidang.length, "Bidang keahlian tidak ditemukan.");
     const common = {
@@ -63,6 +69,8 @@ export async function submitProfileRequest(session: AuthenticatedSession, input:
       namaBaru: data.nama, ubahNama: data.nama !== undefined,
       emailBaru: data.email, ubahEmail: data.email !== undefined,
       noHpBaru: data.noHp, ubahNoHp: data.noHp !== undefined,
+      programStudiLamaId: (user.role === "mahasiswa" ? user.mahasiswa : user.dosen)?.programStudiId,
+      programStudiBaruId: data.programStudiId, ubahProgramStudi: data.programStudiId !== undefined,
       alasan: reason, createdAt: new Date(), updatedAt: new Date(),
     };
     let id: bigint;
@@ -98,10 +106,13 @@ export async function decideProfileRequest(session: AuthenticatedSession, kind: 
     ensure(request?.status === "pending", "Permohonan sudah diproses atau tidak ditemukan.");
     const ownerId = "mahasiswaId" in request ? request.mahasiswaId : request.dosenId;
     const target = await lockedAccount(tx, ownerId);
+    ensure(canDecideAccount(actor, target), "Akun berada di luar kewenangan program studi Anda.");
     if (approve) {
       ensure((kind === "biodata" && target.role === "mahasiswa") || (kind === "keahlian" && target.dosen && ["dosen", "kaprodi", "sekpro"].includes(target.role)), "Peran akun telah berubah.");
       // Legacy NIDN and expertise requests predate the explicit change flags.
+      if (request.ubahProgramStudi) ensure(request.programStudiLamaId === (kind === "biodata" ? target.mahasiswa : target.dosen)?.programStudiId, "Afiliasi telah berubah sejak pengajuan.");
       const fields: Record<string, unknown> = {
+        programStudiId: request.ubahProgramStudi ? String(request.programStudiBaruId) : undefined,
         nama: request.ubahNama ? request.namaBaru : undefined,
         email: request.ubahEmail ? request.emailBaru : undefined,
         noHp: request.ubahNoHp ? request.noHpBaru : undefined,
@@ -142,6 +153,7 @@ export async function decideProfileRequest(session: AuthenticatedSession, kind: 
 
 export function requestSummary(request: Prisma.BiodataChangeRequestGetPayload<object> | Prisma.KeahlianChangeRequestGetPayload<object>) {
   const values: Record<string, unknown> = {};
+  if (request.ubahProgramStudi) values.programStudiId = request.programStudiBaruId;
   if (request.ubahNama) values.nama = request.namaBaru;
   if (request.ubahEmail) values.email = request.emailBaru;
   if (request.ubahNoHp) values.noHp = request.noHpBaru;

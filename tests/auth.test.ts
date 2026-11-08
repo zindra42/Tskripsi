@@ -1,3 +1,4 @@
+import { affiliation } from "./helpers/organization";
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
@@ -13,7 +14,7 @@ const student: AccountPolicy = {
   wajibGantiPassword: false, dosen: null,
 };
 const leader: AccountPolicy = {
-  ...student, role: "dosen", dosen: { isKaprodi: true, isSekpro: false },
+  ...student, role: "dosen", dosen: { ...affiliation(), isKaprodi: true, isSekpro: false },
 };
 
 // Synthetic vectors generated with PHP 8.4 password_hash, never account data.
@@ -95,7 +96,7 @@ test("penggantian password wajib memblokir area kerja termasuk superadmin", () =
 
 test("kaprodi dan sekpro dapat beralih ke dosen tanpa role penugasan buatan", () => {
   assert.deepEqual(availableRoles(leader), ["kaprodi", "dosen"]);
-  const secretary = { ...leader, dosen: { isKaprodi: false, isSekpro: true } };
+  const secretary = { ...leader, dosen: { ...affiliation(), isKaprodi: false, isSekpro: true } };
   assert.deepEqual(availableRoles(secretary), ["sekpro", "dosen"]);
   assert.equal(landingPath(leader, "kaprodi"), "/dashboard/kaprodi");
   assert.equal(landingPath(leader, "dosen"), "/dashboard/dosen");
@@ -104,17 +105,17 @@ test("kaprodi dan sekpro dapat beralih ke dosen tanpa role penugasan buatan", ()
 });
 
 test("dua flag pimpinan dan role historis mempertahankan profil dosen", () => {
-  assert.deepEqual(availableRoles({ ...leader, dosen: { isKaprodi: true, isSekpro: true } }), ["kaprodi", "sekpro", "dosen"]);
+  assert.deepEqual(availableRoles({ ...leader, dosen: { ...affiliation(), isKaprodi: true, isSekpro: true } }), ["kaprodi", "sekpro", "dosen"]);
   assert.deepEqual(availableRoles({ ...leader, role: "kaprodi" }), ["kaprodi", "dosen"]);
   assert.deepEqual(availableRoles({ ...leader, role: "sekpro" }), ["sekpro", "dosen"]);
-  assert.deepEqual(availableRoles({ ...student, role: "kaprodi" }), ["kaprodi"]);
+  assert.deepEqual(availableRoles({ ...student, role: "kaprodi" }), ["dosen"]);
   assert.deepEqual(availableRoles({ ...leader, role: "mahasiswa" }), ["mahasiswa"]);
 });
 
 test("mahasiswa dan dosen biasa tidak bisa menaikkan peran melalui URL atau sesi", () => {
   assert.equal(canAccessArea(student, "mahasiswa", "kaprodi"), false);
   assert.equal(canAccessArea(student, "superadmin", "superadmin"), false);
-  assert.deepEqual(availableRoles({ ...leader, dosen: { isKaprodi: false, isSekpro: false } }), ["dosen"]);
+  assert.deepEqual(availableRoles({ ...leader, dosen: { ...affiliation(), isKaprodi: false, isSekpro: false } }), ["dosen"]);
   assert.equal(landingPath(student, "kaprodi"), "/dashboard/mahasiswa");
   assert.equal(isRole("pembimbing"), false);
   assert.equal(isRole("penguji"), false);

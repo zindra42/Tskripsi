@@ -1,3 +1,4 @@
+import { affiliation } from "./organization";
 import assert from "node:assert/strict";
 import type { Account } from "../../src/lib/accounts/store";
 import type { AuthenticatedSession } from "../../src/lib/auth/session";
@@ -8,9 +9,9 @@ const clone = <T>(v: T): T => structuredClone(v);
 const row = (v: unknown) => v as Row;
 export function account(id: bigint, role: Account["role"]): Account {
   return { id, role, nama: `Aktor ${id}`, email: `user${id}@example.invalid`, emailArsip: null, statusAkun: "aktif", deletedAt: null,
-    wajibGantiPassword: false, authVersion: 0, dibuatOlehSuperAdmin: false, catatanPenolakan: null,
-    mahasiswa: role === "mahasiswa" ? { penggunaId: id, nim: `20200000${id}`, nimArsip: null, semester: 9, prodi: "Informatika", noHp: null, createdAt: null, updatedAt: null } : null,
-    dosen: ["dosen", "kaprodi", "sekpro"].includes(role) ? { penggunaId: id, nidn: `9000${id}`, nidnArsip: null, noHp: null, prodi: "Informatika",
+    wajibGantiPassword: false, fakultasId: null, fakultas: null, authVersion: 0, dibuatOlehSuperAdmin: false, catatanPenolakan: null,
+    mahasiswa: role === "mahasiswa" ? { penggunaId: id, nim: `20200000${id}`, nimArsip: null, semester: 9, ...affiliation(), prodi: "Informatika", noHp: null, createdAt: null, updatedAt: null } : null,
+    dosen: ["dosen", "kaprodi", "sekpro"].includes(role) ? { penggunaId: id, nidn: `9000${id}`, nidnArsip: null, noHp: null, ...affiliation(), prodi: "Informatika",
       isKaprodi: role === "kaprodi", isSekpro: role === "sekpro", kuotaBimbingan: 10, keahlian: [], createdAt: null, updatedAt: null } : null };
 }
 export function session(actor: Account): AuthenticatedSession {

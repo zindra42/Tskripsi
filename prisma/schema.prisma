@@ -14,6 +14,7 @@ enum Role {
   sekpro
   admin_keuangan
   superadmin
+  dekan
 }
 
 enum StatusAkun {
@@ -30,6 +31,8 @@ model Pengguna {
   emailArsip           String?       @map("email_arsip") @db.VarChar(255)
   password             String        @db.VarChar(255)
   role                 Role
+  fakultasId           BigInt?       @map("fakultas_id")
+  fakultas             Fakultas?     @relation(fields: [fakultasId], references: [id], onDelete: Restrict)
   statusAkun           StatusAkun    @default(menunggu_persetujuan) @map("status_akun")
   catatanPenolakan     String?       @map("catatan_penolakan")
   dibuatOlehSuperAdmin Boolean       @default(false) @map("dibuat_oleh_super_admin")
@@ -93,18 +96,46 @@ model Pengguna {
   @@map("pengguna")
 }
 
+model Fakultas {
+  id BigInt @id @default(autoincrement())
+  kode String @unique @db.Citext
+  nama String @db.VarChar(100)
+  aktif Boolean @default(true)
+  programStudi ProgramStudi[]
+  pengguna Pengguna[]
+  @@map("fakultas")
+}
+
+model ProgramStudi {
+  id BigInt @id @default(autoincrement())
+  fakultasId BigInt @map("fakultas_id")
+  fakultas Fakultas @relation(fields: [fakultasId], references: [id], onDelete: Restrict)
+  kode String @db.Citext
+  nama String @db.Citext
+  jenjang String @db.VarChar(10)
+  aktif Boolean @default(true)
+  mahasiswa Mahasiswa[]
+  dosen Dosen[]
+  @@unique([fakultasId, kode])
+  @@unique([fakultasId, nama, jenjang])
+  @@map("program_studi")
+}
+
 model Mahasiswa {
   penggunaId BigInt    @id @map("pengguna_id")
   nim        String?   @unique @db.VarChar(50)
   nimArsip   String?   @map("nim_arsip") @db.VarChar(50)
   semester   Int       @db.SmallInt
   prodi      String?   @db.VarChar(100)
+  programStudiId BigInt? @map("program_studi_id")
+  programStudi ProgramStudi? @relation(fields: [programStudiId], references: [id], onDelete: Restrict)
   noHp       String?   @map("no_hp") @db.VarChar(255)
   createdAt  DateTime? @map("created_at") @db.Timestamp(0)
   updatedAt  DateTime? @map("updated_at") @db.Timestamp(0)
   pengguna   Pengguna  @relation(fields: [penggunaId], references: [id], onDelete: Cascade)
 
   @@index([prodi])
+  @@index([programStudiId])
   @@map("mahasiswa")
 }
 
@@ -115,6 +146,8 @@ model Dosen {
   noHp           String?   @map("no_hp") @db.VarChar(20)
   kuotaBimbingan Int       @default(8) @map("kuota_bimbingan") @db.SmallInt
   prodi          String?   @db.VarChar(100)
+  programStudiId BigInt? @map("program_studi_id")
+  programStudi ProgramStudi? @relation(fields: [programStudiId], references: [id], onDelete: Restrict)
   isKaprodi      Boolean   @default(false) @map("is_kaprodi")
   isSekpro       Boolean   @default(false) @map("is_sekpro")
   createdAt      DateTime? @map("created_at") @db.Timestamp(0)
@@ -123,6 +156,7 @@ model Dosen {
   keahlian       DosenKeahlian[]
 
   @@index([prodi])
+  @@index([programStudiId])
   @@map("dosen")
 }
 
@@ -232,6 +266,9 @@ model BiodataChangeRequest {
   noHpLama String? @map("no_hp_lama") @db.VarChar(255)
   noHpBaru String? @map("no_hp_baru") @db.VarChar(255)
   ubahNoHp Boolean @default(false) @map("ubah_no_hp")
+  programStudiLamaId BigInt? @map("program_studi_lama_id")
+  programStudiBaruId BigInt? @map("program_studi_baru_id")
+  ubahProgramStudi Boolean @default(false) @map("ubah_program_studi")
   rincianData String? @map("rincian_data")
   alasan String
   status String @default("pending") @db.VarChar(30)
@@ -261,6 +298,9 @@ model KeahlianChangeRequest {
   noHpLama String? @map("no_hp_lama") @db.VarChar(20)
   noHpBaru String? @map("no_hp_baru") @db.VarChar(20)
   ubahNoHp Boolean @default(false) @map("ubah_no_hp")
+  programStudiLamaId BigInt? @map("program_studi_lama_id")
+  programStudiBaruId BigInt? @map("program_studi_baru_id")
+  ubahProgramStudi Boolean @default(false) @map("ubah_program_studi")
   keahlianLama Json? @map("keahlian_lama")
   keahlianDiajukan Json? @map("keahlian_diajukan")
   ubahKeahlian Boolean @default(false) @map("ubah_keahlian")

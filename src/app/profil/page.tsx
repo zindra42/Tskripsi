@@ -1,3 +1,4 @@
+import { activeProgramOptions } from "@/lib/organization/store";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { ActionForm, Field, ProfileFields, ReasonField } from "@/components/account-forms";
 import { requireSession } from "@/lib/auth/session";
@@ -16,13 +17,13 @@ export default async function ProfilePage() {
     db.keahlianChangeRequest.findMany({ where: { dosenId: session.user.id }, orderBy: { id: "desc" }, take: 20 }),
   ]);
   return <WorkspaceShell session={session}><h1 className="mb-6 text-3xl font-bold">Profil saya</h1>
-    <div className="space-y-6">
+    <div className="space-y-6">{user.role === "dekan" && <p className="panel">Fakultas: {user.fakultas?.nama ?? "Belum ditetapkan"}. Penempatan dikelola superadmin.</p>}
       <section className="panel"><h2 className="mb-4 text-xl font-semibold">Nama tampilan</h2>
         <ActionForm command="name"><Field name="nama" label="Nama lengkap" value={user.nama} /></ActionForm>
       </section>
-      {(user.mahasiswa || user.dosen) && <section className="panel"><h2 className="mb-3 text-xl font-semibold">Permohonan perubahan biodata dan keahlian</h2>
+      {(["mahasiswa", "dosen", "kaprodi", "sekpro"].includes(user.role)) && <section className="panel"><h2 className="mb-3 text-xl font-semibold">Permohonan perubahan biodata dan keahlian</h2>
         <p className="mb-5 text-sm text-slate-600">Centang data yang ingin diubah. Perubahan berlaku setelah disetujui pengelola. Perubahan email mencabut sesi aktif.</p>
-        <ActionForm command="request-profile" label="Ajukan perubahan"><ProfileFields values={profileValues(user)} options={options} /><ReasonField /></ActionForm>
+        <ActionForm command="request-profile" label="Ajukan perubahan"><ProfileFields programs={await activeProgramOptions()} values={profileValues(user)} options={options} /><ReasonField /></ActionForm>
       </section>}
       <section className="panel"><h2 className="mb-4 text-xl font-semibold">Riwayat permohonan terbaru</h2>
         {[...biodata, ...keahlian].map((request) => <article key={`${"mahasiswaId" in request ? "m" : "d"}-${request.id}`} className="border-b border-slate-200 py-4">

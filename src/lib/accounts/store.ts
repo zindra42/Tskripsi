@@ -14,8 +14,8 @@ export const accountSelect = {
   ...publicUserSelect,
   emailArsip: true,
   dibuatOlehSuperAdmin: true,
-  mahasiswa: true,
-  dosen: { include: { keahlian: { include: { bidang: true } } } },
+  mahasiswa: { include: { programStudi: { include: { fakultas: true } } } },
+  dosen: { include: { programStudi: { include: { fakultas: true } }, keahlian: { include: { bidang: true } } } },
 } satisfies Prisma.PenggunaSelect;
 export type Account = Prisma.PenggunaGetPayload<{ select: typeof accountSelect }>;
 export type Tx = Prisma.TransactionClient;
@@ -73,7 +73,7 @@ export async function audit(tx: Tx, actorId: bigint | null, aksi: string, entity
 export function identitySnapshot(user: Account) {
   return {
     id: user.id, nama: user.nama, email: user.email, emailArsip: user.emailArsip,
-    role: user.role, statusAkun: user.statusAkun, deletedAt: user.deletedAt,
+    role: user.role, fakultasId: user.fakultasId, statusAkun: user.statusAkun, deletedAt: user.deletedAt,
     mahasiswa: user.mahasiswa, dosen: user.dosen,
   };
 }
@@ -90,12 +90,15 @@ export async function assertIdentities(tx: Tx, id: bigint | undefined, values: {
   if (values.nidn) ensure(!await tx.dosen.findFirst({ where: { nidn: values.nidn, ...(id ? { penggunaId: { not: id } } : {}) } }), "NIDN sudah digunakan. Hubungi pengelola untuk pemulihan akun.");
 }
 
-export async function assertSingleKaprodi(tx: Tx, except?: bigint, prodi?: string | null) {
+export async function assertSingleKaprodi(tx: Tx, except?: bigint, prodi?: bigint | null, office: "kaprodi" | "sekpro" = "kaprodi") {
+  ensure(prodi, "Pilih program studi master yang aktif sebelum menetapkan pimpinan.");
+  const program = await tx.programStudi.findUnique({ where: { id: prodi }, include: { fakultas: true } });
+  ensure(program?.aktif && program.fakultas.aktif, "Program studi atau fakultas tidak aktif.");
   ensure(!await tx.pengguna.findFirst({ where: {
-    deletedAt: null, statusAkun: "aktif", ...(except ? { id: { not: except } } : {}),
-    ...(prodi ? { dosen: { prodi } } : {}),
-    OR: [{ role: "kaprodi" }, { role: "dosen", dosen: { isKaprodi: true } }],
-  } }), prodi ? `Sudah ada Kaprodi aktif untuk program studi ${prodi}. Gunakan penetapan peran untuk mengalihkan jabatan.` : "Sudah ada Kaprodi aktif. Gunakan penetapan peran untuk mengalihkan jabatan.");
+    ...(except ? { id: { not: except } } : {}),
+    dosen: { programStudiId: prodi },
+    OR: [{ role: office }, { dosen: { [office === "kaprodi" ? "isKaprodi" : "isSekpro"]: true } }],
+  } }), `Sudah ada ${office === "kaprodi" ? "Kaprodi" : "Sekpro"} aktif untuk program studi ${prodi}. Gunakan tata kelola untuk mengalihkan jabatan.`);
 }
 
 export async function syncExpertise(tx: Tx, id: bigint, bidang: bigint[]) {

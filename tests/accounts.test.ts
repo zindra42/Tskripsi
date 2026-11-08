@@ -2,157 +2,14 @@ import assert from "node:assert/strict";
 import test, { mock } from "node:test";
 import { createRequire } from "node:module";
 import type { PrismaClient } from "../src/generated/prisma/client";
-import type { AuthenticatedSession } from "../src/lib/auth/session";
 import type { Account } from "../src/lib/accounts/store";
 import { academicPeriod, canDecideAccount, canDecideReset, canManage, restoredIdentity, semesterFromNim } from "../src/lib/accounts/policy";
 import { idSchema, newPasswordSchema, settingDefinitions, validateSettings } from "../src/lib/accounts/validation";
 import { tokenHash } from "../src/lib/auth/tokens";
-import { availableRoles } from "../src/lib/auth/policy";
 
+import { fixture, session, syntheticDatabase } from "./helpers/accounts-db";
 type Row = Record<string, unknown>;
-const clone = <T>(value: T): T => structuredClone(value);
-const asRow = (value: unknown) => value as Row;
 const serialized = (value: unknown) => JSON.stringify(value, (_key, item) => typeof item === "bigint" ? item.toString() : item);
-
-function fixture(id: bigint, role: Account["role"] = "mahasiswa", flags = { isKaprodi: false, isSekpro: false }): Account {
-  const lecturer = ["dosen", "kaprodi", "sekpro"].includes(role);
-  return {
-    id, nama: `Pengguna ${id}`, email: `user${id}@example.invalid`, emailArsip: null,
-    role, statusAkun: "aktif", catatanPenolakan: null, wajibGantiPassword: false,
-    authVersion: 0, deletedAt: null, dibuatOlehSuperAdmin: false,
-    mahasiswa: role === "mahasiswa" ? { penggunaId: id, nim: `2200${id}`, nimArsip: null, semester: 9, prodi: "Informatika", noHp: null, createdAt: null, updatedAt: null } : null,
-    dosen: lecturer ? { penggunaId: id, nidn: `9911${id}`, nidnArsip: null, noHp: null, prodi: "Informatika",
-      kuotaBimbingan: 8, ...flags, keahlian: [], createdAt: null, updatedAt: null } : null,
-  };
-}
-
-function session(user: Account, activeRole = availableRoles(user)[0]): AuthenticatedSession {
-  return {
-    tokenHash: tokenHash(`session-${user.id}`), publicId: "763e46a1-d3be-4da6-ab98-0439ce709a43",
-    penggunaId: user.id, authVersion: user.authVersion, activeRole, remember: false,
-    createdAt: new Date(), lastActivity: new Date(), expiresAt: new Date(Date.now() + 300000),
-    user, pengguna: user,
-  };
-}
-
-// Synthetic delegates implement only operations used by these services. No network or PostgreSQL driver is opened.
-function syntheticDatabase(users: Account[], sessions: AuthenticatedSession[]) {
-  const tables: Record<string, Row[]> = Object.fromEntries([
-    "pengguna", "mahasiswa", "dosen", "dosenKeahlian", "bidangKeahlian", "adminKeuangan", "authSession",
-    "passwordResetRequest", "biodataChangeRequest", "keahlianChangeRequest", "logAktivitas", "logSuperAdmin", "pengaturanSistem",
-  ].map((name) => [name, []]));
-  for (const user of users) {
-    tables.pengguna.push(asRow(clone(user)));
-    if (user.mahasiswa) tables.mahasiswa.push(asRow(clone(user.mahasiswa)));
-    if (user.dosen) tables.dosen.push(asRow(clone(user.dosen)));
-  }
-  tables.authSession = sessions.map((value) => asRow(clone(value)));
-  tables.bidangKeahlian = [{ id: 1n, namaBidang: "Jaringan" }, { id: 2n, namaBidang: "Data" }, { id: 3n, namaBidang: "Web" }];
-  const queries: string[] = [];
-  let queue = Promise.resolve();
-  let sequence = 100n;
-
-  function hydrate(name: string, row: Row): Row {
-    if (name === "pengguna") {
-      const dosen = tables.dosen.find((value) => value.penggunaId === row.id);
-      return { ...row, mahasiswa: tables.mahasiswa.find((value) => value.penggunaId === row.id) ?? null,
-        dosen: dosen ? { ...dosen, keahlian: tables.dosenKeahlian.filter((value) => value.dosenId === row.id) } : null };
-    }
-    if (["mahasiswa", "dosen"].includes(name)) {
-      const user = tables.pengguna.find((value) => value.id === row.penggunaId);
-      return { ...row, pengguna: user ? hydrate("pengguna", user) : null };
-    }
-    return row;
-  }
-
-  function matches(row: Row, where: Row = {}): boolean {
-    return Object.entries(where).every(([key, value]) => {
-      if (value === undefined) return true;
-      if (key === "OR") return (value as Row[]).some((part) => matches(row, part));
-      const actual = row[key];
-      if (value && typeof value === "object" && !(value instanceof Date)) {
-        const filter = asRow(value);
-        if ("not" in filter) return actual !== filter.not;
-        if ("in" in filter) return (filter.in as unknown[]).includes(actual);
-        if ("lte" in filter) return actual instanceof Date && actual <= (filter.lte as Date);
-        if ("gt" in filter) return actual instanceof Date && actual > (filter.gt as Date);
-        return actual !== null && actual !== undefined && matches(asRow(actual), filter);
-      }
-      return actual === value;
-    });
-  }
-
-  function update(row: Row, data: Row) {
-    for (const [key, value] of Object.entries(data)) {
-      if (value === undefined) continue;
-      row[key] = value && typeof value === "object" && "increment" in value
-        ? Number(row[key]) + Number(asRow(value).increment) : value;
-    }
-    return clone(row);
-  }
-
-  const db: Row = {};
-  for (const name of Object.keys(tables)) {
-    const find = (args: Row = {}) => tables[name].filter((row) => matches(hydrate(name, row), args.where as Row));
-    db[name] = {
-      findUnique: async (args: Row) => { const row = find(args)[0]; return row ? clone(hydrate(name, row)) : null; },
-      findFirst: async (args: Row) => { const row = find(args)[0]; return row ? clone(hydrate(name, row)) : null; },
-      findMany: async (args: Row = {}) => find(args).map((row) => clone(hydrate(name, row))),
-      count: async (args: Row) => find(args).length,
-      create: async ({ data }: { data: Row }) => {
-        const defaults = name === "pengguna" ? { ...fixture(++sequence, data.role as Account["role"]), mahasiswa: null, dosen: null }
-          : name === "passwordResetRequest" ? { status: "menunggu", token: null, tokenHash: null, authVersion: null, expiresAt: null }
-            : ["biodataChangeRequest", "keahlianChangeRequest"].includes(name) ? { status: "pending" } : {};
-        const row = { id: ++sequence, ...defaults, ...data };
-        tables[name].push(row);
-        return clone(row);
-      },
-      update: async (args: Row) => {
-        const row = find(args)[0];
-        assert.ok(row, `Missing synthetic ${name} row`);
-        return update(row, args.data as Row);
-      },
-      updateMany: async (args: Row) => {
-        const rows = find(args);
-        rows.forEach((row) => update(row, args.data as Row));
-        return { count: rows.length };
-      },
-      deleteMany: async (args: Row) => {
-        const rows = find(args);
-        tables[name] = tables[name].filter((row) => !rows.includes(row));
-        return { count: rows.length };
-      },
-      createMany: async ({ data }: { data: Row[] }) => { tables[name].push(...clone(data)); return { count: data.length }; },
-      upsert: async (args: Row) => {
-        const row = find(args)[0];
-        if (row) return update(row, args.update as Row);
-        const created = { id: ++sequence, ...(args.create as Row) };
-        tables[name].push(created);
-        return clone(created);
-      },
-    };
-  }
-  db.$transaction = async (work: (tx: unknown) => Promise<unknown>) => {
-    let release: (() => void) | undefined;
-    let snapshot: typeof tables | undefined;
-    const tx = { ...db, $queryRaw: async (parts: TemplateStringsArray) => {
-      queries.push(parts.join("?"));
-      if (parts[0].includes("pg_advisory_xact_lock")) {
-        const previous = queue;
-        queue = new Promise<void>((resolve) => { release = resolve; });
-        await previous;
-        snapshot = clone(tables);
-      }
-      return [];
-    } };
-    try { return await work(tx); }
-    catch (error) {
-      if (snapshot) for (const name of Object.keys(tables)) tables[name] = snapshot[name];
-      throw error;
-    } finally { release?.(); }
-  };
-  return { db: db as unknown as PrismaClient, tables, queries };
-}
 
 test("aturan akun dan identitas mengikuti source terbaru", () => {
   const kaprodi = fixture(1n, "dosen", { isKaprodi: true, isSekpro: false });
@@ -466,13 +323,13 @@ test("layanan akun memakai transaksi, database dan sesi sintetis", async (t) => 
 
   await t.test("registrasi dosen/keuangan dan pembuatan superadmin mematuhi flag dan password", async () => {
     setup();
-    await registerAccount({ role: "dosen", nama: "Dosen Baru", email: "newdosen@example.invalid", password: "password123", confirmation: "password123", nidn: "991188", noHp: "081234567890", bidang: ["1", "2"], isSekpro: true });
+    await registerAccount({ programStudiId: "1", role: "dosen", nama: "Dosen Baru", email: "newdosen@example.invalid", password: "password123", confirmation: "password123", nidn: "991188", noHp: "081234567890", bidang: ["1", "2"] });
     const user = harness.tables.pengguna.find((row) => row.email === "newdosen@example.invalid")!;
     assert.equal(user.statusAkun, "menunggu_persetujuan"); assert.equal(user.role, "dosen");
-    assert.equal(harness.tables.dosen.find((row) => row.penggunaId === user.id)?.isSekpro, true);
+    assert.equal(harness.tables.dosen.find((row) => row.penggunaId === user.id)?.isSekpro, false);
     await registerAccount({ role: "admin_keuangan", nama: "Keuangan Baru", email: "finance@example.invalid", password: "password123", confirmation: "password123" });
     assert.equal(harness.tables.adminKeuangan.length, 1);
-    await registerAccount({ role: "dosen", nama: "Dosen Admin", email: "created@example.invalid", nidn: "991189", noHp: "081234567890", bidang: ["1", "2"] }, session(admin), "temporaryPassword123");
+    await registerAccount({ programStudiId: "1", role: "dosen", nama: "Dosen Admin", email: "created@example.invalid", nidn: "991189", noHp: "081234567890", bidang: ["1", "2"] }, session(admin), "temporaryPassword123");
     const created = harness.tables.pengguna.find((row) => row.email === "created@example.invalid")!;
     assert.equal(created.statusAkun, "aktif"); assert.equal(created.wajibGantiPassword, true);
     assert.ok(!serialized(harness.tables.logAktivitas).includes("temporaryPassword123"));
@@ -489,7 +346,7 @@ test("layanan akun memakai transaksi, database dan sesi sintetis", async (t) => 
       { kunci: "periode_akademik_jenis", nilai: "ganjil" },
       { kunci: "periode_akademik_tahun_mulai", nilai: "2026" },
     );
-    const input = { role: "mahasiswa", nama: "Mahasiswa Baru", email: "reused@example.invalid", password: "password123", confirmation: "password123", nim: "22001222", semester: 9, noHp: "081234567890" };
+    const input = { programStudiId: "1", role: "mahasiswa", nama: "Mahasiswa Baru", email: "reused@example.invalid", password: "password123", confirmation: "password123", nim: "22001222", semester: 9, noHp: "081234567890" };
     await assert.rejects(registerAccount({ ...input, semester: 7 }), /Semester dari NIM/);
     await assert.rejects(registerAccount({ ...input, nim: "26001222", semester: 7 }), /Semester dari NIM/);
     await registerAccount(input);
@@ -499,7 +356,7 @@ test("layanan akun memakai transaksi, database dan sesi sintetis", async (t) => 
   });
 
   await t.test("registrasi membuktikan batas semester 7 dan 14 serta menolak 6, 15, periode dan pilihan salah", async () => {
-    const input = { role: "mahasiswa", nama: "Mahasiswa Batas", email: "boundary@example.invalid", password: "password123", confirmation: "password123", noHp: "081234567890" };
+    const input = { programStudiId: "1", role: "mahasiswa", nama: "Mahasiswa Batas", email: "boundary@example.invalid", password: "password123", confirmation: "password123", noHp: "081234567890" };
     for (const item of [
       { jenis: "ganjil", nim: "23001222", semester: 7, valid: true },
       { jenis: "genap", nim: "20001222", semester: 14, valid: true },

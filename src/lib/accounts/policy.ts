@@ -1,5 +1,7 @@
 import { availableRoles, canAccessArea, type AccountPolicy } from "@/lib/auth/policy";
 import type { Role } from "@/generated/prisma/enums";
+import { accountProgramId } from "@/lib/organization/policy";
+import type { Prisma } from "@/generated/prisma/client";
 
 export type AccountIdentity = AccountPolicy & { id: bigint };
 export type AccountPermission = "manage" | "settings" | "superadmin";
@@ -15,24 +17,32 @@ export function canManage(user: AccountPolicy, activeRole: Role, permission: Acc
   return roles.some((role) => canAccessArea(user, activeRole, role));
 }
 
-export function isSameProdi(managerProdi?: string | null, targetProdi?: string | null): boolean {
-  if (!managerProdi || !targetProdi) return true;
-  return managerProdi.trim().toLowerCase() === targetProdi.trim().toLowerCase();
+export function isSameProdi(managerProdi?: bigint | null, targetProdi?: bigint | null): boolean {
+  return typeof managerProdi === "bigint" && managerProdi > 0n && managerProdi === targetProdi;
+}
+
+export function inAccountScope(actor: AccountPolicy, target: AccountPolicy) {
+  return actor.role === "superadmin" || isSameProdi(accountProgramId(actor), accountProgramId(target));
+}
+
+export function scopedAccounts(actor: AccountPolicy): Prisma.PenggunaWhereInput {
+  if (actor.role === "superadmin") return {};
+  const id = accountProgramId(actor);
+  if (!id) return { id: -1n };
+  return { OR: [{ role: "mahasiswa", mahasiswa: { programStudiId: id } }, { role: { in: ["dosen", "kaprodi", "sekpro"] }, dosen: { programStudiId: id } }] };
 }
 
 export function canDecideAccount(actor: AccountIdentity, target: AccountIdentity) {
-  if (actor.id === target.id || target.role === "superadmin") return false;
+  if (actor.id === target.id || target.role === "superadmin" || !inAccountScope(actor, target)) return false;
+  if (actor.role !== "superadmin" && !hasAuthority(actor, "kaprodi") && !hasAuthority(actor, "sekpro")) return false;
   if (hasAuthority(actor, "sekpro") && actor.role !== "superadmin"
       && (hasAuthority(target, "kaprodi") || hasAuthority(target, "sekpro"))) return false;
-  if (actor.role !== "superadmin" && actor.dosen?.prodi) {
-    const targetProdi = target.dosen?.prodi ?? target.mahasiswa?.prodi;
-    if (targetProdi && !isSameProdi(actor.dosen.prodi, targetProdi)) return false;
-  }
   return true;
 }
 
 export function canDecideReset(actor: AccountIdentity, target: AccountIdentity) {
-  return actor.id !== target.id && target.role !== "superadmin"
+  return inAccountScope(actor, target) && actor.id !== target.id && target.role !== "superadmin"
+    && (actor.role === "superadmin" || hasAuthority(actor, "kaprodi") || hasAuthority(actor, "sekpro"))
     && (!hasAuthority(target, "kaprodi") || hasAuthority(actor, "sekpro") || actor.role === "superadmin");
 }
 

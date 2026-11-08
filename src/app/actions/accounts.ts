@@ -38,7 +38,7 @@ function registrationInput(form: FormData) {
 
 function profileInput(form: FormData) {
   const selected = form.getAll("changes").map(String);
-  const fields = ["nama", "email", "nim", "nidn", "semester", "noHp"];
+  const fields = ["nama", "email", "nim", "nidn", "semester", "noHp", "programStudiId"];
   return {
     ...Object.fromEntries(fields.filter((key) => selected.includes(key)).map((key) => [key, form.get(key)])),
     ...(selected.includes("bidang") ? { bidang: form.getAll("bidang") } : {}),

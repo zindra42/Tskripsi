@@ -1,3 +1,4 @@
+import { affiliation } from "./helpers/organization";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import test, { mock } from "node:test";
@@ -22,8 +23,8 @@ function sessionRecord(token: string, publicId: string, remember = false): Sessi
     expiresAt: sessionExpiry(now, remember),
     pengguna: {
       id: 1n, nama: "Pengguna sintetis", email: null, role: "dosen", statusAkun: "aktif",
-      catatanPenolakan: null, wajibGantiPassword: false, authVersion: 0, deletedAt: null,
-      dosen: { isKaprodi: true, isSekpro: false, prodi: "Informatika" },
+      catatanPenolakan: null, wajibGantiPassword: false, authVersion: 0, deletedAt: null, fakultasId: null, fakultas: null,
+      dosen: { ...affiliation(), isKaprodi: true, isSekpro: false, prodi: "Informatika" },
       mahasiswa: null,
     },
   };

@@ -1,10 +1,11 @@
+import { activeProgramOptions } from "@/lib/organization/store";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { ActionForm, Field, ProfileFields, ReasonField } from "@/components/account-forms";
 import { database } from "@/lib/db";
 import { roleLabels } from "@/lib/auth/policy";
-import { canDecideAccount } from "@/lib/accounts/policy";
+import { canDecideAccount, inAccountScope } from "@/lib/accounts/policy";
 import { accountSelect } from "@/lib/accounts/store";
 import { idSchema } from "@/lib/accounts/validation";
 import { expertiseOptions, profileValues, requireAccountPermission } from "@/lib/accounts/views";
@@ -16,7 +17,7 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
   if (!parsed.success) notFound();
   const user = await database().pengguna.findUnique({ where: { id: parsed.data }, select: accountSelect });
   const admin = session.user.role === "superadmin";
-  if (!user || user.role === "superadmin" || (user.deletedAt && !admin)) notFound();
+  if (!user || !inAccountScope(session.user, user) || user.role === "superadmin" || (user.deletedAt && !admin)) notFound();
   const id = user.id.toString();
   return <WorkspaceShell session={session}><Link href="/akun" className="text-sm underline">Kembali ke daftar akun</Link>
     <h1 className="my-5 text-3xl font-bold">{user.nama}</h1>
@@ -34,9 +35,9 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
       </section>}
       {admin && !user.deletedAt && user.statusAkun === "aktif" && <>
         <section className="panel"><h2 className="mb-4 text-xl font-semibold">Koreksi data pribadi</h2>
-          <ActionForm command="edit-profile"><input type="hidden" name="id" value={id} /><ProfileFields values={profileValues(user)} options={await expertiseOptions()} /><ReasonField /></ActionForm>
+          <ActionForm command="edit-profile"><input type="hidden" name="id" value={id} /><ProfileFields programs={await activeProgramOptions()} values={profileValues(user)} options={await expertiseOptions()} /><ReasonField /></ActionForm>
         </section>
-        <section className="panel"><h2 className="mb-3 text-xl font-semibold">Penetapan peran</h2>
+        <section className="panel"><h2 className="mb-3 text-xl font-semibold">Penetapan peran</h2><Link href="/organisasi" className="underline">Tetapkan / ganti Dekan melalui tata kelola fakultas</Link>
           <p className="mb-5 text-sm text-slate-600">Penetapan Kaprodi mengalihkan jabatan dari pemegang sebelumnya. Sesi pengguna terdampak dicabut. Profil historis tetap terhubung ke ID sumber.</p>
           <ActionForm command="role" label="Tetapkan peran"><input type="hidden" name="id" value={id} />
             <label>Peran tujuan<select name="role"><option value="mahasiswa">Mahasiswa</option><option value="dosen">Dosen</option><option value="kaprodi">Kaprodi</option><option value="sekpro">Sekpro</option></select></label>

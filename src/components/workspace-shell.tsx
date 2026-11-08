@@ -29,7 +29,7 @@ export function WorkspaceShell({ session, children }: {
             <Link href="/ganti-password" className="block text-sm text-slate-600 hover:underline">Ganti password</Link>
             <Link href="/profil" className="block text-sm text-slate-600 hover:underline">Profil saya</Link>
             {(session.user.role === "mahasiswa" || session.user.role === "admin_keuangan" || session.user.role === "superadmin") && <Link href="/administrasi" className="block text-sm text-slate-600 hover:underline">Administrasi skripsi</Link>}
-            <Link href="/judul" className="block text-sm text-slate-600 hover:underline">Pengajuan dan review judul</Link>
+            {session.user.role !== "dekan" && <><Link href="/judul" className="block text-sm text-slate-600 hover:underline">Pengajuan dan review judul</Link>
             <Link href="/arsip-judul" className="block text-sm text-slate-600 hover:underline">Arsip judul terdahulu</Link>
             <Link href="/bimbingan" className="block text-sm text-slate-600 hover:underline">Bimbingan dan logbook</Link>
             {session.user.dosen && ["dosen", "kaprodi", "sekpro"].includes(session.user.role) && <Link href="/sempro/revisi" className="block text-sm text-slate-600 hover:underline">Review revisi sempro</Link>}
@@ -46,6 +46,8 @@ export function WorkspaceShell({ session, children }: {
               <Link href="/sempro/jadwal" className="block text-sm text-slate-600 hover:underline">Jadwal sempro & penguji</Link>
               <Link href="/sempro/hasil" className="block text-sm text-slate-600 hover:underline">Hasil kelulusan sempro</Link>
             </>}
+            </>}
+            {["dekan", "superadmin"].includes(session.user.role) && <><Link href="/organisasi" className="block text-sm text-slate-600 hover:underline">Tata kelola fakultas / prodi</Link><Link href="/monitoring" className="block text-sm text-slate-600 hover:underline">Monitoring fakultas</Link></>}
             <Link href="/notifikasi" className="block text-sm text-slate-600 hover:underline">Notifikasi</Link>
             {(session.user.role === "mahasiswa" || session.user.role === "superadmin" || session.user.dosen && ["dosen", "kaprodi", "sekpro"].includes(session.user.role)) && <Link href="/sidang" className="block text-sm text-slate-600 hover:underline">Sidang dan revisi akhir</Link>}
             <Link href="/pengumuman" className="block text-sm text-slate-600 hover:underline">Pengumuman</Link>
