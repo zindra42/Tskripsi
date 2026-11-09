@@ -148,3 +148,33 @@ test("token acak 256 bit, hash satu arah, dan durasi sesi", () => {
   assert.equal(IDLE_MILLISECONDS, 300_000);
   assert.equal(REMEMBER_MILLISECONDS, 604_800_000);
 });
+
+test("superadmin dikonfigurasi melalui .env dan divalidasi keamanannya", async () => {
+  const { isSuperadminEmail, getSuperadminEnvConfig } = await import("../src/lib/auth/superadmin");
+  const prevEmail = process.env.SUPERADMIN_EMAIL;
+  const prevPass = process.env.SUPERADMIN_PASSWORD;
+  const prevName = process.env.SUPERADMIN_NAME;
+
+  try {
+    delete process.env.SUPERADMIN_EMAIL;
+    delete process.env.SUPERADMIN_PASSWORD;
+    assert.equal(getSuperadminEnvConfig(), null);
+    assert.equal(isSuperadminEmail("admin@example.com"), false);
+
+    process.env.SUPERADMIN_EMAIL = "superadmin@uts.ac.id";
+    process.env.SUPERADMIN_PASSWORD = "secretpassword123";
+    process.env.SUPERADMIN_NAME = "Super Admin Utama";
+
+    const config = getSuperadminEnvConfig();
+    assert.ok(config);
+    assert.equal(config.nama, "Super Admin Utama");
+    assert.equal(config.email, "superadmin@uts.ac.id");
+    assert.equal(config.password, "secretpassword123");
+    assert.equal(isSuperadminEmail("SUPERADMIN@UTS.AC.ID"), true);
+    assert.equal(isSuperadminEmail("other@uts.ac.id"), false);
+  } finally {
+    if (prevEmail === undefined) delete process.env.SUPERADMIN_EMAIL; else process.env.SUPERADMIN_EMAIL = prevEmail;
+    if (prevPass === undefined) delete process.env.SUPERADMIN_PASSWORD; else process.env.SUPERADMIN_PASSWORD = prevPass;
+    if (prevName === undefined) delete process.env.SUPERADMIN_NAME; else process.env.SUPERADMIN_NAME = prevName;
+  }
+});

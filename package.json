@@ -14,7 +14,8 @@
     "prisma:validate": "prisma validate",
     "migration:audit-source": "node scripts/audit-legacy-schema.mjs",
     "migration:dry-run": "tsx --conditions=react-server scripts/migration-dry-run.ts",
-    "migration:rehearsal": "tsx --conditions=react-server scripts/migration-rehearsal.ts"
+    "migration:rehearsal": "tsx --conditions=react-server scripts/migration-rehearsal.ts",
+    "superadmin:sync": "tsx --conditions=react-server scripts/sync-superadmin.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",

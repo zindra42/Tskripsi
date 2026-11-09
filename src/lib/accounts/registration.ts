@@ -2,6 +2,7 @@ import "server-only";
 import { activeProgram } from "@/lib/organization/store";
 import { hashPassword } from "@/lib/auth/password";
 import type { AuthenticatedSession } from "@/lib/auth/session";
+import { isSuperadminEmail } from "@/lib/auth/superadmin";
 import { academicPeriod, semesterFromNim } from "./policy";
 import { idSchema, registrationSchema } from "./validation";
 import { accountTransaction, assertIdentities, assertSingleKaprodi, audit, checkedActor, ensure, settingsValues, syncExpertise } from "./store";
@@ -9,6 +10,8 @@ import { accountTransaction, assertIdentities, assertSingleKaprodi, audit, check
 export async function registerAccount(input: unknown, session?: AuthenticatedSession, temporaryPassword?: string) {
   const data = registrationSchema.parse(input);
   const admin = Boolean(session);
+  ensure((data.role as string) !== "superadmin", "Role superadmin adalah peran tunggal sistem dan tidak dapat didaftarkan.");
+  ensure(!isSuperadminEmail(data.email), "Email tersebut dicadangkan khusus untuk akun Super Admin.");
   ensure(admin || ["mahasiswa", "dosen", "admin_keuangan"].includes(data.role), "Peran pendaftaran tidak diizinkan.");
   ensure(admin || !data.isSekpro, "Jabatan Sekpro ditetapkan melalui tata kelola setelah akun dosen aktif.");
   ensure(admin || (data.password && data.password === data.confirmation), "Konfirmasi password tidak cocok.");

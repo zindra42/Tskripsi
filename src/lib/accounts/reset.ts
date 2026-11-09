@@ -4,6 +4,7 @@ import { database } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { hashPassword } from "@/lib/auth/password";
 import { newSessionToken, tokenHash } from "@/lib/auth/tokens";
+import { isSuperadminEmail } from "@/lib/auth/superadmin";
 import type { AuthenticatedSession } from "@/lib/auth/session";
 import { canDecideReset } from "./policy";
 import { newPasswordSchema, reasonSchema } from "./validation";
@@ -11,6 +12,7 @@ import { accountTransaction, audit, checkedActor, ensure, invalidateSessions, lo
 
 export async function requestPasswordReset(identity: string) {
   const identitas = z.string().trim().min(1).max(255).parse(identity);
+  if (isSuperadminEmail(identitas)) return;
   const where = {
     deletedAt: null, statusAkun: "aktif", role: { not: "superadmin" },
     OR: [{ email: identitas }, { mahasiswa: { nim: identitas } }, { dosen: { nidn: identitas } }],

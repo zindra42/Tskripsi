@@ -2,6 +2,7 @@ import "server-only";
 import { activeProgram, hasLeadership, clearLeadership, rotateLeadership } from "@/lib/organization/store";
 import { z } from "zod";
 import type { AuthenticatedSession } from "@/lib/auth/session";
+import { isSuperadminEmail } from "@/lib/auth/superadmin";
 import { canDecideAccount, hasAuthority, restoredIdentity } from "./policy";
 import { reasonSchema, identifierSchema, idSchema } from "./validation";
 import { accountTransaction, assertIdentities, assertSingleKaprodi, audit, checkedActor, ensure, identitySnapshot, invalidateSessions, lockedAccount, settingsValues } from "./store";
@@ -34,7 +35,7 @@ export async function changeAccountStatus(session: AuthenticatedSession, id: big
   return accountTransaction(async (tx) => {
     const actor = await checkedActor(tx, session, action === "delete" ? "manage" : "superadmin");
     const target = await lockedAccount(tx, id);
-    ensure(actor.id !== id && target.role !== "superadmin", "Tindakan terhadap akun sendiri atau superadmin tidak diizinkan.");
+    ensure(actor.id !== id && target.role !== "superadmin" && !isSuperadminEmail(target.email) && !isSuperadminEmail(target.emailArsip), "Tindakan terhadap akun sendiri atau superadmin tidak diizinkan.");
     if (action === "delete") ensure(canDecideAccount(actor, target), "Akun berada di luar kewenangan Anda.");
     const before = identitySnapshot(target);
     if (target.role === "dekan" && (action === "restore" || action === "activate")) {
@@ -79,7 +80,9 @@ export async function assignRole(session: AuthenticatedSession, id: bigint, inpu
   return accountTransaction(async (tx) => {
     const actor = await checkedActor(tx, session, "superadmin");
     const target = await lockedAccount(tx, id);
-    ensure(target.role !== "superadmin" && target.deletedAt === null && target.statusAkun === "aktif", "Penetapan memerlukan akun aktif selain superadmin.");
+    ensure(target.role !== "superadmin" && !isSuperadminEmail(target.email), "Role akun Super Admin bersifat permanen dan tidak dapat diubah.");
+    ensure((data.role as string) !== "superadmin", "Role superadmin adalah peran tunggal sistem dan tidak dapat ditambahkan.");
+    ensure(target.deletedAt === null && target.statusAkun === "aktif", "Penetapan memerlukan akun aktif selain superadmin.");
     const effectiveRole = hasAuthority(target, "kaprodi") ? "kaprodi" : hasAuthority(target, "sekpro") ? "sekpro" : target.role;
     ensure(data.role !== effectiveRole, "Peran tujuan harus berbeda dari peran saat ini.");
     const before = identitySnapshot(target);

@@ -1,5 +1,6 @@
 import "server-only";
 import { activeProgram, hasLeadership } from "@/lib/organization/store";
+import { isSuperadminEmail } from "@/lib/auth/superadmin";
 import { canDecideAccount } from "./policy";
 import { activeProgramId } from "@/lib/organization/policy";
 import { z } from "zod";
@@ -39,7 +40,7 @@ export async function editAccountProfile(session: AuthenticatedSession, id: bigi
   return accountTransaction(async (tx) => {
     const actor = await checkedActor(tx, session, "superadmin");
     const target = await lockedAccount(tx, id);
-    ensure(target.role !== "superadmin", "Gunakan profil sendiri untuk akun superadmin.");
+    ensure(target.role !== "superadmin" && !isSuperadminEmail(target.email), "Gunakan profil sendiri untuk akun superadmin.");
     const before = identitySnapshot(target);
     await applyProfile(tx, target, data);
     await audit(tx, actor.id, "edit_data_pribadi_pengguna", `pengguna:${id}`, { reason, before, after: identitySnapshot(await lockedAccount(tx, id)) });
@@ -50,6 +51,7 @@ export async function updateOwnName(session: AuthenticatedSession, name: string)
   const nama = z.string().trim().min(3).max(255).parse(name);
   return accountTransaction(async (tx) => {
     const actor = await checkedActor(tx, session);
+    ensure(actor.role !== "superadmin" && !isSuperadminEmail(actor.email), "Nama akun Super Admin dikelola langsung melalui berkas environment (.env).");
     await tx.pengguna.update({ where: { id: actor.id }, data: { nama, updatedAt: new Date() } });
     await audit(tx, actor.id, "update_profil", `pengguna:${actor.id}`, { before: actor.nama, after: nama });
   });

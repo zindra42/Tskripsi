@@ -1,6 +1,7 @@
 import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { database } from "@/lib/db";
+import { isSuperadminEmail } from "@/lib/auth/superadmin";
 import { publicUserSelect, type AuthenticatedSession } from "@/lib/auth/session";
 import { canAuthenticate } from "@/lib/auth/policy";
 import { canManage, type AccountPermission } from "./policy";
@@ -85,7 +86,15 @@ export async function settingsValues(tx: Pick<Tx, "pengaturanSistem">) {
 
 export async function assertIdentities(tx: Tx, id: bigint | undefined, values: { email?: string | null; nim?: string | null; nidn?: string | null }) {
   const otherUser = id ? { id: { not: id } } : {};
-  if (values.email) ensure(!await tx.pengguna.findFirst({ where: { ...otherUser, email: values.email } }), "Email sudah digunakan. Hubungi pengelola untuk pemulihan akun.");
+  if (values.email) {
+    if (isSuperadminEmail(values.email)) {
+      const superadmin = await tx.pengguna.findFirst({ where: { role: "superadmin" } });
+      if (!id || id !== superadmin?.id) {
+        ensure(false, "Email tersebut dicadangkan khusus untuk Super Admin sistem.");
+      }
+    }
+    ensure(!await tx.pengguna.findFirst({ where: { ...otherUser, email: values.email } }), "Email sudah digunakan. Hubungi pengelola untuk pemulihan akun.");
+  }
   if (values.nim) ensure(!await tx.mahasiswa.findFirst({ where: { nim: values.nim, ...(id ? { penggunaId: { not: id } } : {}) } }), "NIM sudah digunakan. Hubungi pengelola untuk pemulihan akun.");
   if (values.nidn) ensure(!await tx.dosen.findFirst({ where: { nidn: values.nidn, ...(id ? { penggunaId: { not: id } } : {}) } }), "NIDN sudah digunakan. Hubungi pengelola untuk pemulihan akun.");
 }

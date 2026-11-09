@@ -11,6 +11,7 @@ import {
   requireSession, setSessionCookie,
 } from "@/lib/auth/session";
 import { loginSchema, passwordSchema } from "@/lib/auth/validation";
+import { ensureSuperadmin, isSuperadminEmail } from "@/lib/auth/superadmin";
 
 export type FormState = { error: string };
 const unavailable = { error: "Layanan autentikasi belum tersedia. Silakan coba kembali atau hubungi pengelola SIAS." };
@@ -31,6 +32,9 @@ export async function login(_state: FormState, formData: FormData): Promise<Form
   try {
     if (!await allowLogin(parsed.data.email)) return throttled;
     const db = database();
+    if (isSuperadminEmail(parsed.data.email)) {
+      await ensureSuperadmin(db);
+    }
     const user = await db.pengguna.findUnique({
       where: { email: parsed.data.email },
       select: { ...publicUserSelect, password: true },
@@ -71,6 +75,9 @@ export async function logout(): Promise<FormState> {
 export async function changePassword(_state: FormState, formData: FormData): Promise<FormState> {
   if (!await hasTrustedOrigin()) return untrustedOrigin;
   const session = await requireSession("password");
+  if (session.user.role === "superadmin" || isSuperadminEmail(session.user.email)) {
+    return { error: "Password akun Super Admin dikelola langsung melalui berkas environment (.env) dan tidak dapat diubah di sini." };
+  }
   const parsed = passwordSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { error: "Password baru minimal 8 karakter dan maksimal 72 byte UTF-8, berbeda dari password saat ini, serta cocok dengan konfirmasi." };

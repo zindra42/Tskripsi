@@ -62,10 +62,11 @@ test("layanan akun memakai transaksi, database dan sesi sintetis", async (t) => 
   t.after(() => navigation.restore());
   const { decideAccounts, changeAccountStatus, assignRole } = await import("../src/lib/accounts/management");
   const { decidePasswordReset, completePasswordReset, requestPasswordReset } = await import("../src/lib/accounts/reset");
-  const { submitProfileRequest, decideProfileRequest, editAccountProfile } = await import("../src/lib/accounts/profile");
+  const { submitProfileRequest, decideProfileRequest, editAccountProfile, updateOwnName } = await import("../src/lib/accounts/profile");
   const { registerAccount } = await import("../src/lib/accounts/registration");
   const { saveSettings } = await import("../src/lib/accounts/settings");
   const { accountTransaction } = await import("../src/lib/accounts/store");
+  const { ensureSuperadmin, isSuperadminEmail } = await import("../src/lib/auth/superadmin");
   const globalDb = globalThis as unknown as { siasDatabase?: PrismaClient };
   const previous = globalDb.siasDatabase;
   t.after(() => { globalDb.siasDatabase = previous; });
@@ -475,6 +476,59 @@ test("layanan akun memakai transaksi, database dan sesi sintetis", async (t) => 
       headersMock.mock.restore(); cookiesMock.mock.restore(); revalidate.mock.restore();
       if (previousOrigin === undefined) delete process.env.APP_ORIGIN;
       else process.env.APP_ORIGIN = previousOrigin;
+    }
+  });
+
+  await t.test("akun superadmin dari .env bersifat tunggal, permanen, tidak dapat dihapus atau ditambahkan perannya", async () => {
+    setup();
+    const prevEmail = process.env.SUPERADMIN_EMAIL;
+    const prevPass = process.env.SUPERADMIN_PASSWORD;
+    const prevName = process.env.SUPERADMIN_NAME;
+    process.env.SUPERADMIN_EMAIL = "superadmin@uts.ac.id";
+    process.env.SUPERADMIN_PASSWORD = "superadminpassword123";
+    process.env.SUPERADMIN_NAME = "Super Administrator";
+    try {
+      assert.ok(isSuperadminEmail("superadmin@uts.ac.id"));
+      assert.ok(isSuperadminEmail("SUPERADMIN@UTS.AC.ID"));
+      assert.ok(!isSuperadminEmail("other@uts.ac.id"));
+
+      // 1. Akun superadmin tidak dapat dihapus atau dinonaktifkan
+      await assert.rejects(changeAccountStatus(session(admin), admin.id, "delete", reason, "KONFIRMASI"), /tidak diizinkan/);
+      await assert.rejects(changeAccountStatus(session(admin), admin.id, "deactivate", reason, "KONFIRMASI"), /tidak diizinkan/);
+
+      // 2. Role superadmin tidak dapat diubah ke peran lain
+      await assert.rejects(assignRole(session(admin), admin.id, { role: "dosen" }, reason, "UBAH PERAN"), /Super Admin/);
+
+      // 3. Role superadmin tidak dapat ditambahkan ke akun lain
+      await assert.rejects(assignRole(session(admin), student.id, { role: "superadmin" } as unknown as { role: "dosen" }, reason, "UBAH PERAN"));
+
+      // 4. Role superadmin tidak dapat didaftarkan
+      await assert.rejects(registerAccount({ role: "superadmin", nama: "Fake Admin", email: "fake@example.invalid", password: "password123", confirmation: "password123" }), /Invalid option|Peran|superadmin/);
+
+      // 5. Email superadmin dicadangkan dan tidak bisa didaftarkan akun lain
+      await assert.rejects(registerAccount({ programStudiId: "1", role: "dosen", nama: "Hijacker", email: "superadmin@uts.ac.id", password: "password123", confirmation: "password123", nidn: "991191", noHp: "081234567890", bidang: ["1", "2"] }), /dicadangkan|Email/);
+
+      // 6. Nama superadmin tidak dapat diubah via updateOwnName
+      await assert.rejects(updateOwnName(session(admin), "Nama Pengganti"), /Super Admin/);
+
+      // 7. Sinkronisasi dari .env memastikan peran superadmin tunggal dan update kredensial
+      const synced = await ensureSuperadmin(harness.db);
+      assert.ok(synced);
+      assert.equal(synced.email, "superadmin@uts.ac.id");
+      assert.equal(synced.role, "superadmin");
+      assert.equal(synced.statusAkun, "aktif");
+
+      // Cek invariant satu-satunya: bila ada superadmin ekstra, dinonaktifkan
+      const extraAdmin = fixture(99n, "superadmin");
+      harness.tables.pengguna.push(extraAdmin as unknown as Record<string, unknown>);
+      await ensureSuperadmin(harness.db);
+      const updatedExtra = harness.tables.pengguna.find((row) => row.id === 99n);
+      assert.equal(updatedExtra?.statusAkun, "nonaktif");
+      assert.ok(updatedExtra?.deletedAt);
+    } finally {
+      if (prevEmail === undefined) delete process.env.SUPERADMIN_EMAIL; else process.env.SUPERADMIN_EMAIL = prevEmail;
+      if (prevPass === undefined) delete process.env.SUPERADMIN_PASSWORD; else process.env.SUPERADMIN_PASSWORD = prevPass;
+      if (prevName === undefined) delete process.env.SUPERADMIN_NAME; else process.env.SUPERADMIN_NAME = prevName;
     }
   });
 });
