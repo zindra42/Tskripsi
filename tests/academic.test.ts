@@ -265,6 +265,30 @@ test("alur akademik menjalankan layanan dan entry point aktual dengan database s
     assert.equal(title().judul, titleInput.judul);
   });
 
+  await t.test("approval setelah mahasiswa pindah prodi menolak bidang lama dan mempertahankan seluruh state", async () => {
+    await establish();
+    fixture.tables.bimbingan = [];
+    Object.assign(fixture.tables.mahasiswa.find((m) => m.penggunaId === 1n)!, affiliation(2n, 2n));
+    Object.assign(fixture.tables.dosen.find((d) => d.penggunaId === 2n)!, affiliation(2n, 2n));
+    let before = clone(fixture.tables);
+    await assert.rejects(run(1, (c) => reviewTitle(c, { id: String(title().id) }, "approve")), /program studi/);
+    assert.deepEqual(fixture.tables, before);
+
+    await establish();
+    await run(0, (c) => submitChange(c, { ...titleInput, id: String(bimbingan().id), judul: "Judul Baru Penelitian Akademik", jenis: "revisi_minor", reason: "Penyesuaian variabel penelitian" }));
+    const change = fixture.tables.pengajuanPerubahanJudul[0];
+    Object.assign(fixture.tables.mahasiswa.find((m) => m.penggunaId === 1n)!, affiliation(2n, 2n));
+    Object.assign(fixture.tables.dosen.find((d) => d.penggunaId === 2n)!, affiliation(2n, 2n));
+    before = clone(fixture.tables);
+    await assert.rejects(run(3, (c) => decideChange(c, { id: String(change.id) }, true, false)), /program studi/);
+    assert.deepEqual(fixture.tables, before);
+    fixture.tables.pengajuanPerubahanJudul[0].status = "menunggu_kaprodi";
+    fixture.tables.pengajuanPerubahanJudul[0].disetujuiDospem1 = true;
+    before = clone(fixture.tables);
+    await assert.rejects(run(1, (c) => decideChange(c, { id: String(change.id) }, true, true)), /program studi/);
+    assert.deepEqual(fixture.tables, before);
+  });
+
   await t.test("pengajuan perubahan dan rekomendasi menyaring grant historis dosen dari prodi lain", async () => {
     await establish();
     fixture.tables.bidangKeahlian.push({ id: 90n, namaBidang: "Data", programStudiId: 2n });

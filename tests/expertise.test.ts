@@ -159,7 +159,7 @@ test("bidang per prodi melalui layanan dan database sintetis", async (t) => {
   });
 
   await t.test("penautan legacy memeriksa semua referensi scalar, matriks, draft, perubahan dan permohonan", async () => {
-    for (const reference of ["pivot", "scalar", "matrix", "draft", "changeOld", "changeNew", "requestOld", "requestNew"] as const) {
+    for (const reference of ["pivot", "scalar", "scalarSecond", "matrix", "draft", "changeOld", "changeNew", "changeScalar", "changeScalarSecond", "requestOld", "requestNew"] as const) {
       for (const ownerProgram of [2n, null]) {
         const { tables } = setup();
         tables.dosen[0].programStudiId = ownerProgram;
@@ -171,10 +171,16 @@ test("bidang per prodi melalui layanan dan database sintetis", async (t) => {
         else {
           tables.pengajuanJudul.push({ id: 70n, idMahasiswa: 3n, deletedAt: new Date(),
             bidangKeahlianId: reference === "scalar" ? 6n : null,
+            bidangKeahlian2Id: reference === "scalarSecond" ? 6n : null,
             matriksPenelitian: reference === "matrix" ? matrix : [], draftData: reference === "draft" ? { matriks: matrix } : null });
           if (reference.startsWith("change")) {
             tables.bimbingan.push({ id: 71n, idPengajuan: 70n });
-            tables.pengajuanPerubahanJudul.push({ id: 72n, bimbinganId: 71n, [reference === "changeOld" ? "matriksLama" : "matriksBaru"]: matrix });
+            tables.pengajuanPerubahanJudul.push({ id: 72n, bimbinganId: 71n,
+              bidangKeahlianIdBaru: reference === "changeScalar" ? 6n : null,
+              bidangKeahlian2IdBaru: reference === "changeScalarSecond" ? 6n : null,
+              matriksLama: reference === "changeOld" ? matrix : [],
+              matriksBaru: reference === "changeNew" ? matrix : [],
+            });
           }
         }
         const before = structuredClone(tables);
