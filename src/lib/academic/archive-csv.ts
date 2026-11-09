@@ -79,13 +79,26 @@ export function parseCsv(text: string): string[][] {
   return rows;
 }
 
-function escapeCsvField(value: string | null | undefined): string {
+function escapeCsvField(value: string | null | undefined, identifier = false): string {
   if (value == null) return "";
-  const str = String(value);
+  // Apostrophe is a reversible spreadsheet text marker. Escape existing markers too.
+  const str = (/^['=+@\-\t\r\n]/.test(value) || /^\s+[=+@\-]/.test(value) || identifier && /^\d+$/.test(value)) ? `'${value}` : value;
   if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
     return `"${str.replaceAll('"', '""')}"`;
   }
   return str;
+}
+
+function importedCsvField(value: string, identifier = false) {
+  if (value.startsWith("'") && (/^['=+@\-\t\r\n]/.test(value.slice(1))
+    || /^\s+[=+@\-]/.test(value.slice(1)) || identifier && /^\d+$/.test(value.slice(1)))) return value.slice(1);
+  return value;
+}
+
+export const archiveCsvHeader = "judul,nama_penulis,tahun,nim,prodi";
+export function archiveCsvRow(row: { judul: string; namaPenulis: string | null; tahun: string | null; nim: string | null; prodi: string | null }) {
+  return [escapeCsvField(row.judul), escapeCsvField(row.namaPenulis), escapeCsvField(row.tahun),
+    escapeCsvField(row.nim, true), escapeCsvField(row.prodi)].join(",");
 }
 
 /**
@@ -97,21 +110,15 @@ export async function exportArchiveCsv(tx: Tx): Promise<string> {
     orderBy: { id: "asc" },
   });
 
-  const header = "judul,nama_penulis,tahun,nim,prodi";
+  const header = archiveCsvHeader;
   const lines = [header];
 
   for (const row of rows) {
-    const line = [
-      escapeCsvField(row.judul),
-      escapeCsvField(row.namaPenulis),
-      escapeCsvField(row.tahun),
-      escapeCsvField(row.nim),
-      escapeCsvField(row.prodi),
-    ].join(",");
+    const line = archiveCsvRow(row);
     lines.push(line);
   }
 
-  return lines.join("\n");
+  return lines.join("\r\n");
 }
 
 /**
@@ -145,7 +152,7 @@ export async function importArchiveCsv(
   const now = new Date();
 
   for (let idx = 0; idx < rawRows.length; idx++) {
-    const data = rawRows[idx];
+    const data = rawRows[idx]?.map((value, column) => importedCsvField(value, column === 3));
     if (!data || data.length === 0 || (data.length === 1 && !data[0]?.trim())) {
       continue;
     }
