@@ -29,6 +29,16 @@ Populasi adalah mahasiswa aktif, tidak terhapus, yang terpetakan dalam cakupan. 
 
 Revisi terlambat menghitung proses sempro/sidang resmi yang lulus revisi, belum selesai, dan tenggat tanggalnya sebelum hari ini di WITA. Beban dosen menghitung penugasan pembimbing 1/2 pada judul aktif milik mahasiswa dalam cakupan, sesuai predicate kuota aplikasi; satu bimbingan hanya sekali per dosen. Ini bukan total penugasan di luar cakupan. Tidak dibuat rasio KTW/risiko DO. Respons mahasiswa hanya agregat; query tidak memilih nama, berkas, hash, token, nilai atau snapshot privat mahasiswa.
 
+## Bidang keahlian per prodi (TASK-019)
+
+Migration `20261109000000_expertise_program` menambahkan FK prodi nullable pada bidang dan mengganti unique nama global dengan pasangan ID prodi/nama CITEXT. Nama prodi identik pada fakultas berbeda tetap terisolasi. Seluruh bidang lama tetap berprodi null, beserta ID, pivot, matriks, draft dan permohonannya. Importer mengisi kolom sumber seperti sebelumnya dan membiarkan afiliasi baru null.
+
+Sesudah penerapan migration oleh operator yang disetujui pemilik, superadmin membuka `/pengaturan`, memilih fakultas/prodi aktif untuk bidang baru, atau memakai kartu pemetaan bidang legacy. Penautan memeriksa pivot dosen, kedua kolom bidang judul/perubahan, seluruh baris matriks lama/baru, draft dan kedua daftar keahlian pada permohonan. Referensi prodi lain atau profil belum terpetakan menggagalkan transaksi. Petakan profil berdasarkan bukti administrasi terlebih dahulu. Untuk bidang legacy yang dipakai lintas prodi, pertahankan identitas tersebut dan buat master baru per prodi. Penautan diaudit dan prodi bidang yang sudah dipetakan bersifat tetap.
+
+Pilihan baru hanya memakai bidang terpetakan pada prodi dan fakultas aktif. Registrasi, bidang lainnya, profil/approval, judul/draft serta persetujuan perubahan memeriksa ulang ID terhadap afiliasi tersimpan. Form mereset pilihan ketika prodi tujuan berubah. Pivot dari afiliasi lama tetap tersimpan dan disaring dari pilihan/grant aktif serta rekomendasi. Opsi publik hanya mengirim ID/nama bidang dan ID prodi.
+
+Pengujian TASK-019 memakai adapter sintetis, termasuk keunikan case-insensitive, bigint, rollback pemetaan/registrasi, permohonan lama dan pergantian afiliasi. Eksekusi migration/index/trigger di PostgreSQL serta pemetaan dan formulir terautentikasi pada data uji masih memerlukan lingkungan yang disetujui pemilik.
+
 ## Verifikasi patch
 
 Layanan diuji dengan fixture dan database sintetis: isolasi fakultas/prodi bernama sama, null, ID bigint, spoof ID/filter, sesi kedaluwarsa/mode sesi tersimpan, dosen historis pada Dekan, mutasi master, pemetaan, rotasi dua jabatan, jalur superadmin lama, preservasi histori dan penghitungan tahap/tenggat WITA. Rehearsal importer sintetis memeriksa rollback/restart/reimport, 51 tabel sumber, 54 row, 53 tahap dan delapan entri berkas. Ini bukan bukti eksekusi SQL PostgreSQL atau alur login Dekan pada database nyata.

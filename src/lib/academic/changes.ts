@@ -3,6 +3,7 @@ import { managesTitle } from "./policy";
 import { z } from "zod";
 import { ensure, jsonValue } from "@/lib/accounts/store";
 import { idSchema } from "@/lib/accounts/validation";
+import { assertProgramExpertise, matrixExpertiseIds } from "@/lib/accounts/expertise";
 import { titleSchema, reason } from "./validation";
 import { preprocess, similarity, similarityColumns } from "./similarity";
 import { cancelSupervisor, event, guidanceRecord, managers, requireManager, requireStudent, requireSupervisor, type Context, type Input } from "./store";
@@ -24,7 +25,7 @@ export async function submitChange(context: Context, input: Input) {
   ensure(data.judul !== b.pengajuan.judul, "Judul baru harus berbeda.");
   ensure(!await context.tx.pengajuanPerubahanJudul.findFirst({ where: { bimbinganId: b.id, status: { in: ["diajukan", "menunggu_dospem", "menunggu_kaprodi"] } } }), "Masih ada perubahan judul menunggu keputusan.");
   const fieldIds = [...new Set(data.matriks.flatMap((row) => [row.bidang_keahlian_id, row.bidang_keahlian_2_id]).filter((id): id is bigint => id !== null))];
-  ensure(await context.tx.bidangKeahlian.count({ where: { id: { in: fieldIds } } }) === fieldIds.length, "Bidang keahlian tidak ditemukan.");
+  await assertProgramExpertise(context.tx, fieldIds, b.pengajuan.mahasiswa.mahasiswa?.programStudiId);
   const result = similarity(data.judul, await context.tx.arsipJudulSkripsi.findMany({ orderBy: { id: "asc" } }));
   const row = await context.tx.pengajuanPerubahanJudul.create({ data: { bimbinganId: b.id, judulLama: b.pengajuan.judul,
     judulBaru: data.judul, alasan: note, jenisPerubahan: kind, matriksLama: jsonValue(b.pengajuan.matriksPenelitian), matriksBaru: jsonValue(data.matriks),
@@ -40,6 +41,9 @@ export async function decideChange(context: Context, input: Input, approve: bool
   ensure(row, "Perubahan judul tidak ditemukan.");
   const b = await guidanceRecord(context, row.bimbinganId);
   const note = approve ? z.string().max(1000).parse(input.reason ?? "") : reason.parse(input.reason);
+  if (approve) await assertProgramExpertise(tx,
+    [row.bidangKeahlianIdBaru, row.bidangKeahlian2IdBaru, ...matrixExpertiseIds(row.matriksBaru)].filter((id): id is bigint => id != null),
+    b.pengajuan.mahasiswa.mahasiswa?.programStudiId);
   if (!final) {
     requireSupervisor(context, b);
     ensure(row.status === "menunggu_dospem", "Perubahan judul sudah diputuskan atau diteruskan ke pengelola.");

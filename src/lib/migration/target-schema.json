@@ -1,5 +1,5 @@
 {
-  "schemaSha256": "4f55175c4f60a4573cafde025c6ec04155ec70c61062d4dee68fdc39f086d7e8",
+  "schemaSha256": "3d85baa8fe3b2dc153d21e9c2c2b448e4adc6c84b4177193b91f7654498e3e18",
   "tables": {
     "pengguna": {
       "columns": {
@@ -787,6 +787,14 @@
           ],
           "enum": null
         },
+        "program_studi_id": {
+          "type": "BigInt",
+          "nullable": true,
+          "generated": false,
+          "default": null,
+          "native": [],
+          "enum": null
+        },
         "created_at": {
           "type": "DateTime",
           "nullable": true,
@@ -815,10 +823,17 @@
       ],
       "unique": [
         [
+          "program_studi_id",
           "nama_bidang"
         ]
       ],
-      "foreignKeys": []
+      "foreignKeys": [
+        {
+          "column": "program_studi_id",
+          "table": "program_studi",
+          "target": "id"
+        }
+      ]
     },
     "dosen_keahlian": {
       "columns": {

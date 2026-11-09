@@ -5,6 +5,7 @@ import { z } from "zod";
 import { academicPeriod, semesterFromNim } from "@/lib/accounts/policy";
 import { ensure, jsonValue, settingsValues } from "@/lib/accounts/store";
 import { idSchema } from "@/lib/accounts/validation";
+import { assertProgramExpertise, matrixExpertiseIds } from "@/lib/accounts/expertise";
 import { administrationValid, currentTitle, periodCode, witaDate } from "./policy";
 import { readStoredFile, storeUpload } from "./files";
 import { preprocess, similarity, similarityColumns, similarityWarning } from "./similarity";
@@ -14,7 +15,7 @@ import { cancelSupervisor, event, managers, requireFinance, requireManager, requ
 async function validateReferences(context: Context, fields: (bigint | null | undefined)[], preferences: bigint[]) {
   const program = await activeProgram(context.tx, context.actor.mahasiswa?.programStudiId);
   const ids = [...new Set(fields.filter((id): id is bigint => id != null))];
-  ensure(await context.tx.bidangKeahlian.count({ where: { id: { in: ids } } }) === ids.length, "Bidang keahlian tidak ditemukan.");
+  await assertProgramExpertise(context.tx, ids, program.id);
   ensure(await context.tx.dosen.count({ where: { programStudiId: program.id, penggunaId: { in: preferences }, pengguna: { statusAkun: "aktif", deletedAt: null, role: { in: ["dosen", "kaprodi", "sekpro"] } },
     OR: [{ nidn: null }, { NOT: { nidn: { contains: "_DEL_" } } }],
   } }) === preferences.length, "Dosen preferensi tidak aktif.");
@@ -98,6 +99,8 @@ export async function reviewTitle(context: Context, input: Input, decision: "app
   };
   await tx.pengajuanJudul.update({ where: { id: title.id }, data });
   if (decision === "approve") {
+    await assertProgramExpertise(tx, [title.bidangKeahlianId, title.bidangKeahlian2Id, ...matrixExpertiseIds(title.matriksPenelitian)]
+      .filter((id): id is bigint => id != null), title.mahasiswa.mahasiswa?.programStudiId);
     const keywords = preprocess(title.judul, true);
     const nim = title.mahasiswa.mahasiswa?.nim ?? null;
     const existing = nim

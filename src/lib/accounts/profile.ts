@@ -7,6 +7,7 @@ import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import type { AuthenticatedSession } from "@/lib/auth/session";
 import { profileSchema, reasonSchema } from "./validation";
+import { assertProgramExpertise } from "./expertise";
 import { accountTransaction, assertIdentities, audit, checkedActor, ensure, identitySnapshot, invalidateSessions, lockedAccount, syncExpertise, type Account, type Tx } from "./store";
 
 type ProfileChanges = z.infer<typeof profileSchema>;
@@ -66,7 +67,7 @@ export async function submitProfileRequest(session: AuthenticatedSession, input:
     checkProfileRole(user, data);
     if (data.programStudiId !== undefined) { await activeProgram(tx, data.programStudiId); ensure(!hasLeadership(user), "Berhentikan jabatan sebelum mengajukan perubahan afiliasi."); }
     await assertIdentities(tx, user.id, data);
-    if (data.bidang) ensure(await tx.bidangKeahlian.count({ where: { id: { in: data.bidang } } }) === data.bidang.length, "Bidang keahlian tidak ditemukan.");
+    if (data.bidang) await assertProgramExpertise(tx, data.bidang, data.programStudiId ?? user.dosen?.programStudiId);
     const common = {
       namaLama: user.nama, emailLama: user.email, noHpLama: user.role === "mahasiswa" ? user.mahasiswa?.noHp : user.dosen?.noHp,
       namaBaru: data.nama, ubahNama: data.nama !== undefined,
@@ -132,7 +133,10 @@ export async function decideProfileRequest(session: AuthenticatedSession, kind: 
       } else {
         fields.nidn = request.ubahNidn || request.nidnBaru ? request.nidnBaru : undefined;
         const bidang = request.keahlianDiajukan;
-        if ((request.ubahKeahlian || bidang) && Array.isArray(bidang)) {
+        if (request.ubahKeahlian || bidang) ensure(request.programStudiLamaId == null || request.programStudiLamaId === target.dosen?.programStudiId,
+          "Afiliasi telah berubah sejak pengajuan keahlian. Ajukan ulang permohonan.");
+        if (request.ubahKeahlian || bidang) {
+          ensure(Array.isArray(bidang), "Data keahlian permohonan tidak valid. Ajukan ulang permohonan.");
           fields.bidang = bidang.map((value) => {
             ensure(typeof value === "string" || (typeof value === "number" && Number.isSafeInteger(value)), "ID keahlian legacy tidak valid.");
             return String(value);

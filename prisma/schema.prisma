@@ -116,6 +116,7 @@ model ProgramStudi {
   aktif Boolean @default(true)
   mahasiswa Mahasiswa[]
   dosen Dosen[]
+  bidangKeahlian BidangKeahlian[]
   @@unique([fakultasId, kode])
   @@unique([fakultasId, nama, jenjang])
   @@map("program_studi")
@@ -197,7 +198,9 @@ model AuthRateLimit {
 
 model BidangKeahlian {
   id         BigInt @id @default(autoincrement())
-  namaBidang String @unique @map("nama_bidang") @db.Citext
+  namaBidang String @map("nama_bidang") @db.Citext
+  programStudiId BigInt? @map("program_studi_id")
+  programStudi ProgramStudi? @relation(fields: [programStudiId], references: [id], onDelete: Restrict)
   createdAt  DateTime? @map("created_at") @db.Timestamp(0)
   updatedAt  DateTime? @map("updated_at") @db.Timestamp(0)
   dosen      DosenKeahlian[]
@@ -205,6 +208,7 @@ model BidangKeahlian {
   secondTitles PengajuanJudul[] @relation("TitleField2")
   firstChanges PengajuanPerubahanJudul[] @relation("ChangeField1")
   secondChanges PengajuanPerubahanJudul[] @relation("ChangeField2")
+  @@unique([programStudiId, namaBidang])
   @@map("bidang_keahlian")
 }
 

@@ -44,7 +44,7 @@ test("master baru tidak menebak afiliasi atau mengubah graf impor historis", () 
   const snapshot = syntheticSnapshot(), plan = createPlan(snapshot, tableOrder());
   assert.ok(targetCatalog.tables.fakultas && targetCatalog.tables.program_studi);
   assert.ok(!plan.stages.some((s) => s.name.startsWith("insert:fakultas:") || s.name.startsWith("insert:program_studi:")));
-  for (const table of ["pengguna", "mahasiswa", "dosen"]) {
+  for (const table of ["pengguna", "mahasiswa", "dosen", "bidang_keahlian"]) {
     assert.ok(!foreignKeys(table).some((fk) => ["fakultas", "program_studi"].includes(fk.table)));
     for (const op of plan.stages.flatMap((s) => s.operations).filter((op) => op.table === table)) {
       assert.ok(!Object.hasOwn(op.mapped, "program_studi_id"));
