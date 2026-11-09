@@ -50,6 +50,15 @@ body {
   button:disabled {
     @apply cursor-wait opacity-60 pointer-events-none;
   }
+  details summary::-webkit-details-marker {
+    display: none;
+  }
+  details summary {
+    list-style: none;
+  }
+  details[open] > summary .details-chevron {
+    transform: rotate(180deg);
+  }
 }
 
 @layer components {
