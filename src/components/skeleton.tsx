@@ -95,22 +95,25 @@ export function WorkspaceShellSkeleton({ children }: { children?: React.ReactNod
   return (
     <div className="min-h-screen" aria-busy="true" aria-label="Memuat antarmuka">
       {/* Header bar skeleton */}
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-5 sm:px-10">
-        <div className="space-y-1">
-          <Skeleton className="h-7 w-24" />
-          <Skeleton className="h-3 w-48" />
-        </div>
-        <div className="flex items-center gap-5">
-          <div className="space-y-1 text-right">
-            <Skeleton className="h-4 w-28 ml-auto" />
-            <Skeleton className="h-3 w-20 ml-auto" />
+      <header className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-5 py-3 shadow-xs sm:px-8">
+        <div className="flex items-center gap-2.5">
+          <Skeleton className="h-8 w-8 rounded-lg" />
+          <div className="space-y-1">
+            <Skeleton className="h-3 w-10" />
+            <Skeleton className="h-2.5 w-20" />
           </div>
-          <Skeleton className="h-9 w-20 rounded-lg" />
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="hidden space-y-1 sm:block">
+            <Skeleton className="h-3 w-28 ml-auto" />
+            <Skeleton className="h-2.5 w-16 ml-auto" />
+          </div>
+          <Skeleton className="h-9 w-16 rounded-lg" />
         </div>
       </header>
 
       {/* Main layout grid skeleton */}
-      <div className="mx-auto grid max-w-7xl gap-7 p-5 sm:p-10 lg:grid-cols-[240px_1fr]">
+      <div className="mx-auto grid max-w-7xl gap-6 p-4 sm:p-8 lg:grid-cols-[240px_1fr]">
         {/* Sidebar skeleton */}
         <aside className="space-y-7">
           <div className="panel space-y-4 p-5!">

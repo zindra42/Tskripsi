@@ -19,33 +19,22 @@ function NavButton({
   return (
     <Link
       href={href}
-      className="group flex items-center gap-2.5 rounded-xl border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 hover:text-[#14213d] hover:shadow-xs active:scale-[0.98]"
+      className="group flex items-center gap-2 rounded-lg border border-transparent px-2.5 py-1.5 text-[13px] font-medium text-slate-600 transition-all duration-150 hover:border-slate-200 hover:bg-white hover:text-[#14213d] hover:shadow-xs active:scale-[0.98]"
     >
-      {icon && <span className="shrink-0 text-slate-400 transition-colors group-hover:text-slate-600">{icon}</span>}
+      {icon && <span className="shrink-0 text-slate-400 transition-colors group-hover:text-slate-500">{icon}</span>}
       <span className="min-w-0 flex-1 truncate">{children}</span>
       {badge && (
-        <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+        <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
           {badge}
         </span>
       )}
-      <svg
-        className="h-3 w-3 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-500"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-      </svg>
     </Link>
   );
 }
 
 function NavSectionDivider({ label }: { label: string }) {
   return (
-    <div className="pt-2 pb-0.5">
-      <div className="border-t border-slate-200/80" />
-      <p className="pt-2 px-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase">{label}</p>
-    </div>
+    <p className="mt-4 mb-1 px-2.5 text-[10px] font-bold tracking-widest text-slate-400 uppercase">{label}</p>
   );
 }
 
@@ -57,19 +46,20 @@ export function WorkspaceShell({ session, children }: {
   const working = session.user.statusAkun === "aktif" && !session.user.wajibGantiPassword;
   return <div className="min-h-screen">
     <SessionActivity key={session.publicId} remember={session.remember} sessionId={session.publicId} />
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-5 sm:px-10">
-      <div><p className="text-2xl font-bold tracking-wide">SIAS<span className="text-[#bf7600]">.</span></p><p className="text-xs text-slate-500">Sistem Informasi Akademik Skripsi</p></div>
-      <div className="flex items-center gap-5">
-        <div className="text-right"><p className="font-semibold">{session.user.nama}</p><p className="text-sm text-slate-600">{roleLabels[session.activeRole]}</p></div>
+    <header className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-5 py-3 shadow-xs backdrop-blur-sm sm:px-8">
+      <div className="flex items-center gap-2.5">
+        <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#14213d] text-sm font-bold text-[#fca311]" aria-hidden="true">S</span>
+        <div><p className="text-sm font-bold tracking-wide leading-none text-[#14213d]">SIAS</p><p className="text-[10px] text-slate-400 leading-none mt-0.5">Akademik Skripsi</p></div>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="hidden text-right sm:block"><p className="text-sm font-semibold text-[#14213d] leading-tight">{session.user.nama}</p><p className="text-xs text-slate-500 leading-tight">{roleLabels[session.activeRole]}</p></div>
         <LogoutForm />
       </div>
     </header>
-    <div className="mx-auto grid max-w-7xl gap-7 p-5 sm:p-10 lg:grid-cols-[260px_1fr]">
-      <aside className="space-y-6">
-        <nav aria-label="Navigasi utama" className="panel space-y-1.5 p-3.5!">
-          <div className="px-1 pb-1">
-            <p className="text-[11px] font-bold tracking-wider text-slate-400 uppercase">AREA KERJA</p>
-          </div>
+    <div className="mx-auto grid max-w-7xl gap-6 p-4 sm:p-8 lg:grid-cols-[240px_1fr]">
+      <aside className="space-y-4">
+        <nav aria-label="Navigasi utama" className="rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-xs">
+          <p className="section-label px-2 pb-2">Area Kerja</p>
           {working ? <>
             {/* Navigasi Utama */}
             <NavButton
@@ -362,10 +352,10 @@ export function WorkspaceShell({ session, children }: {
                 Pengaturan sistem
               </NavButton>
             )}
-          </> : <p className="text-sm text-slate-600">Lengkapi persyaratan akun untuk membuka dashboard.</p>}
+          </> : <p className="text-sm text-slate-500">Lengkapi persyaratan akun untuk membuka area kerja.</p>}
         </nav>
-        {working && roles.length > 1 && <section className="panel p-5!"><RoleForm roles={roles} activeRole={session.activeRole} /></section>}
-        <p className="px-2 text-xs leading-relaxed text-slate-500">SIAS TypeScript<br />Akun dan administrasi dasar</p>
+        {working && roles.length > 1 && <section className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-xs"><RoleForm roles={roles} activeRole={session.activeRole} /></section>}
+        <p className="px-1 text-[11px] leading-relaxed text-slate-400">SIAS · TypeScript edition</p>
       </aside>
       <main id="konten" className="min-w-0">{children}</main>
     </div>
