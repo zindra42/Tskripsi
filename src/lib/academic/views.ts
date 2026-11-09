@@ -32,7 +32,7 @@ export function scopedTitles(actor: Account, manager: boolean): Prisma.Pengajuan
 
 export const titleOptions = cache(async (programId: bigint | null = null) => {
   const [fields, lecturers] = await Promise.all([
-    getCachedMasterFields(),
+    getCachedMasterFields(programId),
     database().dosen.findMany({ where: { programStudiId: programId ?? -1n, programStudi: { aktif: true, fakultas: { aktif: true } }, pengguna: { deletedAt: null, statusAkun: "aktif", role: { in: ["dosen", "kaprodi", "sekpro"] } },
       OR: [{ nidn: null }, { NOT: { nidn: { contains: "_DEL_" } } }],
     }, include: { pengguna: { select: { nama: true } }, keahlian: { include: { bidang: true } } }, orderBy: { penggunaId: "asc" } }),
@@ -52,9 +52,9 @@ export async function recommendations(title: { judul: string; bidangKeahlianId: 
   }
   const rows = await Promise.all(options.rawLecturers.map(async (lecturer) => ({
     id: lecturer.penggunaId.toString(), nama: lecturer.pengguna.nama,
-    score: recommendationScore(title.judul, [...new Set(fields)], lecturer.keahlian),
+    score: recommendationScore(title.judul, [...new Set(fields)], lecturer.keahlian.filter((item) => item.bidang.programStudiId === programId)),
     remaining: Math.max(0, lecturer.kuotaBimbingan - await supervisorLoad(database(), lecturer.penggunaId, except)),
-    expertise: lecturer.keahlian.map((item) => item.bidang.namaBidang).join(", "),
+    expertise: lecturer.keahlian.filter((item) => item.bidang.programStudiId === programId).map((item) => item.bidang.namaBidang).join(", "),
   })));
   return rows.sort((a, b) => b.score - a.score || b.remaining - a.remaining);
 }

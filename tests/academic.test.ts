@@ -44,13 +44,14 @@ function synthetic(users: Account[]) {
   tables.mahasiswa = users.filter((item) => item.mahasiswa).map((item) => row(clone(item.mahasiswa)));
   tables.authSession = users.map((item) => row(session(item)));
   tables.dosen = users.filter((item) => item.dosen).map((item) => row(clone(item.dosen)));
-  tables.bidangKeahlian = [{ id: 1n, namaBidang: "Data" }, { id: 2n, namaBidang: "Jaringan" }];
+  tables.bidangKeahlian = [{ id: 1n, namaBidang: "Data", programStudiId: 1n, programStudi: program() }, { id: 2n, namaBidang: "Jaringan", programStudiId: 1n, programStudi: program() }];
   tables.pengaturanSistem = Object.entries({ periode_pengajuan_judul_mulai: "2000-01-01", periode_pengajuan_judul_selesai: "2099-12-31", periode_akademik_mulai: "2000-01-01", periode_akademik_selesai: "2099-12-31", minimal_sesi_bimbingan_acc_sempro: "2", minimal_sesi_bimbingan_skripsi: "2" }).map(([kunci, nilai]) => ({ kunci, nilai }));
   let sequence = 100n;
   let queue = Promise.resolve();
   const queries: string[] = [];
   function hydrate(name: string, item: Row): Row {
     const find = (table: string, id: unknown) => tables[table].find((candidate) => candidate.id === id);
+    if (name === "bidangKeahlian") return { ...item, programStudi: find("programStudi", item.programStudiId) ?? null };
     if (name === "pengajuanJudul") return { ...item, mahasiswa: hydrate("pengguna", find("pengguna", item.idMahasiswa)!), bimbingan: tables.bimbingan.find((candidate) => candidate.idPengajuan === item.id) ?? null };
     if (name === "bimbingan") return { ...item, pengajuan: hydrate("pengajuanJudul", find("pengajuanJudul", item.idPengajuan)!),
       pembimbing1: find("pengguna", item.idDosenPembimbing), pembimbing2: find("pengguna", item.idDosenPembimbing2),
@@ -236,6 +237,50 @@ test("alur akademik menjalankan layanan dan entry point aktual dengan database s
     await run(1, (context) => assignSupervisors(context, { id: String(title().id), supervisors: two ? ["4", "5"] : ["4"] }));
   }
 
+  await t.test("draft dan matriks seluruh baris menolak bidang lintas prodi, legacy null dan ID palsu", async () => {
+    for (const field of ["90", "91", "999"]) {
+      reset();
+      fixture.tables.bidangKeahlian.push({ id: 90n, namaBidang: "Data", programStudiId: 2n }, { id: 91n, namaBidang: "Legacy", programStudiId: null });
+      await assert.rejects(run(0, (c) => saveTitle(c, { ...titleInput, matriks: [...matrix, { ...matrix[0], bidang_keahlian_id: field }] }, {}, true)), /program studi/);
+      assert.equal(fixture.tables.pengajuanJudul.length, 0);
+    }
+    reset();
+    fixture.tables.programStudi[0].aktif = false;
+    await assert.rejects(run(0, (c) => saveTitle(c, titleInput, {}, true)), /tidak aktif/);
+  });
+
+  await t.test("approval judul dan perubahan lama memeriksa ulang semua bidang terhadap afiliasi saat ini", async () => {
+    await establish();
+    fixture.tables.pengajuanJudul[0].matriksPenelitian = [{ bidang_keahlian_id: "1" }, { bidang_keahlian_id: "999" }];
+    await assert.rejects(run(1, (c) => reviewTitle(c, { id: String(title().id) }, "approve")), /Batalkan penetapan/);
+    fixture.tables.bimbingan = [];
+    await assert.rejects(run(1, (c) => reviewTitle(c, { id: String(title().id) }, "approve")), /program studi/);
+    await establish();
+    await run(0, (c) => submitChange(c, { ...titleInput, id: String(bimbingan().id), judul: "Judul Baru Penelitian Akademik", jenis: "revisi_minor", reason: "Penyesuaian variabel penelitian" }));
+    const change = fixture.tables.pengajuanPerubahanJudul[0];
+    change.matriksBaru = [{ bidang_keahlian_id: "999" }];
+    await assert.rejects(run(3, (c) => decideChange(c, { id: String(change.id) }, true, false)), /program studi/);
+    change.status = "menunggu_kaprodi"; change.disetujuiDospem1 = true;
+    await assert.rejects(run(1, (c) => decideChange(c, { id: String(change.id) }, true, true)), /program studi/);
+    assert.equal(title().judul, titleInput.judul);
+  });
+
+  await t.test("pengajuan perubahan dan rekomendasi menyaring grant historis dosen dari prodi lain", async () => {
+    await establish();
+    fixture.tables.bidangKeahlian.push({ id: 90n, namaBidang: "Data", programStudiId: 2n });
+    await assert.rejects(run(0, (c) => submitChange(c, { ...titleInput, matriks: [{ ...matrix[0], bidang_keahlian_id: "90" }], id: String(bimbingan().id), judul: "Judul Baru Penelitian Akademik", jenis: "revisi_minor", reason: "Penyesuaian variabel penelitian" })), /program studi/);
+    fixture.tables.dosen.find((d) => d.penggunaId === 4n)!.keahlian = [
+      { bidangId: 90n, bidang: { namaBidang: "Rahasia Bidang Lama", programStudiId: 2n } },
+      { bidangId: 91n, bidang: { namaBidang: "Legacy Null", programStudiId: null } },
+      { bidangId: 1n, bidang: { namaBidang: "Data", programStudiId: 1n } },
+    ];
+    const { recommendations, titleOptions } = await import("../src/lib/academic/views");
+    assert.ok((await titleOptions(1n)).fields.every((f) => f.id !== "90"));
+    const options = await recommendations({ judul: "Analisis Data", bidangKeahlianId: 90n, bidangKeahlian2Id: null, matriksPenelitian: [] }, undefined, 1n);
+    assert.equal(options.find((d) => d.id === "4")!.expertise, "Data");
+    assert.deepEqual(await titleOptions(null).then((o) => o.fields), []);
+  });
+
   await t.test("nama prodi sama beda fakultas dan prodi null tidak memberi hak review/penetapan", async () => {
     for (const programId of [2n, null]) {
       await establish();
@@ -338,12 +383,14 @@ test("alur akademik menjalankan layanan dan entry point aktual dengan database s
     assert.equal(options.length, activeLecturers.length);
     assert.ok(options[0].id && options[0].nama);
 
-    const fields = await getCachedMasterFields();
+    assert.deepEqual(await getCachedMasterFields(), []);
+    const fields = await getCachedMasterFields(1n);
     assert.ok(Array.isArray(fields));
     assert.ok(fields.length >= 2);
     assert.ok(fields.some((f) => f.namaBidang === "Data"));
 
-    const titleOpts = await titleOptions();
+    assert.deepEqual((await titleOptions()).fields, []);
+    const titleOpts = await titleOptions(1n);
     assert.ok(Array.isArray(titleOpts.fields));
     assert.ok(Array.isArray(titleOpts.lecturers));
     assert.ok(titleOpts.fields.length >= 2);

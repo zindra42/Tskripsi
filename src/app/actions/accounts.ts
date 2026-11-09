@@ -12,7 +12,7 @@ import { registerAccount } from "@/lib/accounts/registration";
 import { completePasswordReset, decidePasswordReset, requestPasswordReset } from "@/lib/accounts/reset";
 import { assignRole, changeAccountStatus, decideAccounts } from "@/lib/accounts/management";
 import { decideProfileRequest, editAccountProfile, submitProfileRequest, updateOwnName } from "@/lib/accounts/profile";
-import { addExpertise, saveSettings } from "@/lib/accounts/settings";
+import { addExpertise, linkLegacyExpertise, saveSettings } from "@/lib/accounts/settings";
 
 export type AccountFormState = { error: string; success?: string; secret?: string; secretLabel?: string };
 const untrusted = { error: "Permintaan tidak dapat diverifikasi. Muat ulang halaman." };
@@ -126,7 +126,10 @@ export async function accountAction(_state: AccountFormState, form: FormData): P
         await saveSettings(session, Object.fromEntries(form), reason);
         break;
       case "add-expertise":
-        await addExpertise(session, String(form.get("namaBidang") ?? ""), reason);
+        await addExpertise(session, String(form.get("namaBidang") ?? ""), idSchema.parse(form.get("programStudiId")), reason);
+        break;
+      case "link-expertise":
+        await linkLegacyExpertise(session, idSchema.parse(form.get("id")), idSchema.parse(form.get("programStudiId")), reason);
         break;
       default: return { error: "Tindakan tidak dikenal." };
     }

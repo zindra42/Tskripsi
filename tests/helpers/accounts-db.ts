@@ -34,7 +34,7 @@ export function session(user: Account, activeRole = availableRoles(user)[0]): Au
 export function syntheticDatabase(users: Account[], sessions: AuthenticatedSession[]) {
   const tables: Record<string, Row[]> = Object.fromEntries([
     "fakultas", "programStudi", "pengguna", "mahasiswa", "dosen", "dosenKeahlian", "bidangKeahlian", "adminKeuangan", "authSession",
-    "passwordResetRequest", "biodataChangeRequest", "keahlianChangeRequest", "logAktivitas", "logSuperAdmin", "pengaturanSistem", "bimbingan",
+    "passwordResetRequest", "biodataChangeRequest", "keahlianChangeRequest", "logAktivitas", "logSuperAdmin", "pengaturanSistem", "bimbingan", "pengajuanJudul", "pengajuanPerubahanJudul",
   ].map((name) => [name, []]));
   for (const user of users) {
     tables.pengguna.push(asRow(clone(user)));
@@ -44,12 +44,21 @@ export function syntheticDatabase(users: Account[], sessions: AuthenticatedSessi
   tables.fakultas = [program().fakultas, program(2n, 2n).fakultas];
   tables.programStudi = [program(), program(2n, 2n), program(3n, 1n)];
   tables.authSession = sessions.map((value) => asRow(clone(value)));
-  tables.bidangKeahlian = [{ id: 1n, namaBidang: "Jaringan" }, { id: 2n, namaBidang: "Data" }, { id: 3n, namaBidang: "Web" }];
+  tables.bidangKeahlian = [{ id: 1n, namaBidang: "Jaringan", programStudiId: 1n }, { id: 2n, namaBidang: "Data", programStudiId: 1n }, { id: 3n, namaBidang: "Web", programStudiId: 1n }];
   const queries: string[] = [];
   let queue = Promise.resolve();
   let sequence = 100n;
 
   function hydrate(name: string, row: Row): Row {
+    if (name === "bidangKeahlian") {
+      const program = tables.programStudi.find((p) => p.id === row.programStudiId);
+      return { ...row, programStudi: program ? hydrate("programStudi", program) : null };
+    }
+    if (name === "dosenKeahlian") return { ...row, dosen: tables.dosen.find((d) => d.penggunaId === row.dosenId), bidang: tables.bidangKeahlian.find((f) => f.id === row.bidangId) };
+    if (name === "pengajuanJudul") return { ...row, mahasiswa: hydrate("pengguna", tables.pengguna.find((u) => u.id === row.idMahasiswa)!) };
+    if (name === "bimbingan" && row.idPengajuan !== undefined) return { ...row, pengajuan: hydrate("pengajuanJudul", tables.pengajuanJudul.find((t) => t.id === row.idPengajuan)!) };
+    if (name === "pengajuanPerubahanJudul") return { ...row, bimbingan: hydrate("bimbingan", tables.bimbingan.find((b) => b.id === row.bimbinganId)!) };
+    if (name === "keahlianChangeRequest") return { ...row, dosen: hydrate("pengguna", tables.pengguna.find((u) => u.id === row.dosenId)!) };
     if (name === "fakultas") return { ...row, pengguna: tables.pengguna.filter((u) => u.fakultasId === row.id && u.role === "dekan" && !u.deletedAt) };
     if (name === "programStudi") return { ...row, fakultas: tables.fakultas.find((f) => f.id === row.fakultasId), dosen: tables.dosen.filter((d) => d.programStudiId === row.id) };
     if (name === "pengguna") {
@@ -57,7 +66,7 @@ export function syntheticDatabase(users: Account[], sessions: AuthenticatedSessi
       const student = tables.mahasiswa.find((value) => value.penggunaId === row.id);
       const mapped = (profile: Row) => ({ ...profile, programStudi: tables.programStudi.find((p) => p.id === profile.programStudiId) ? hydrate("programStudi", tables.programStudi.find((p) => p.id === profile.programStudiId)!) : null });
       return { ...row, fakultas: tables.fakultas.find((f) => f.id === row.fakultasId) ?? null, mahasiswa: student ? mapped(student) : null,
-        dosen: dosen ? { ...mapped(dosen), keahlian: tables.dosenKeahlian.filter((value) => value.dosenId === row.id) } : null };
+        dosen: dosen ? { ...mapped(dosen), keahlian: tables.dosenKeahlian.filter((value) => value.dosenId === row.id).map((pivot) => hydrate("dosenKeahlian", pivot)) } : null };
     }
     if (["mahasiswa", "dosen"].includes(name)) {
       const user = tables.pengguna.find((value) => value.id === row.penggunaId);
@@ -69,6 +78,7 @@ export function syntheticDatabase(users: Account[], sessions: AuthenticatedSessi
   function matches(row: Row, where: Row = {}): boolean {
     return Object.entries(where).every(([key, value]) => {
       if (value === undefined) return true;
+      if (key === "programStudiId_namaBidang") return matches(row, asRow(value));
       if (key === "AND") return (Array.isArray(value) ? value as Row[] : [value as Row]).every((part) => matches(row, part));
       if (key === "OR") return (value as Row[]).some((part) => matches(row, part));
       const actual = row[key];
@@ -82,7 +92,7 @@ export function syntheticDatabase(users: Account[], sessions: AuthenticatedSessi
         if ("gt" in filter) return actual instanceof Date && actual > (filter.gt as Date);
         return actual !== null && actual !== undefined && matches(asRow(actual), filter);
       }
-      return actual === value;
+      return key === "namaBidang" && typeof actual === "string" && typeof value === "string" ? actual.toLowerCase() === value.toLowerCase() : actual === value;
     });
   }
 
@@ -96,6 +106,12 @@ export function syntheticDatabase(users: Account[], sessions: AuthenticatedSessi
   }
 
   const db: Row = {};
+  function assertUniqueField(name: string, data: Row) {
+    if (name === "bidangKeahlian" && data.programStudiId != null && tables.bidangKeahlian.some((f) => f.id !== data.id
+      && f.programStudiId === data.programStudiId && String(f.namaBidang).toLowerCase() === String(data.namaBidang).toLowerCase())) {
+      throw Object.assign(new Error("Duplicate scoped expertise"), { code: "P2002" });
+    }
+  }
   for (const name of Object.keys(tables)) {
     const find = (args: Row = {}) => tables[name].filter((row) => matches(hydrate(name, row), args.where as Row));
     db[name] = {
@@ -109,17 +125,19 @@ export function syntheticDatabase(users: Account[], sessions: AuthenticatedSessi
           : name === "passwordResetRequest" ? { status: "menunggu", token: null, tokenHash: null, authVersion: null, expiresAt: null }
             : ["biodataChangeRequest", "keahlianChangeRequest"].includes(name) ? { status: "pending" } : {};
         const row = { id: ++sequence, ...defaults, ...data };
+        assertUniqueField(name, row);
         tables[name].push(row);
         return clone(row);
       },
       update: async (args: Row) => {
         const row = find(args)[0];
         assert.ok(row, `Missing synthetic ${name} row`);
+        assertUniqueField(name, { ...row, ...args.data as Row });
         return update(row, args.data as Row);
       },
       updateMany: async (args: Row) => {
         const rows = find(args);
-        rows.forEach((row) => update(row, args.data as Row));
+        rows.forEach((row) => { assertUniqueField(name, { ...row, ...args.data as Row }); update(row, args.data as Row); });
         return { count: rows.length };
       },
       deleteMany: async (args: Row) => {
@@ -132,6 +150,7 @@ export function syntheticDatabase(users: Account[], sessions: AuthenticatedSessi
         const row = find(args)[0];
         if (row) return update(row, args.update as Row);
         const created = { id: ++sequence, ...(args.create as Row) };
+        assertUniqueField(name, created);
         tables[name].push(created);
         return clone(created);
       },

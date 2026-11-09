@@ -50,8 +50,8 @@ export async function registerAccount(input: unknown, session?: AuthenticatedSes
       for (const value of data.bidang) {
         if (value === "lainnya") {
           ensure(data.bidangLainnya, "Nama bidang keahlian lainnya wajib diisi.");
-          const bidang = await tx.bidangKeahlian.upsert({ where: { namaBidang: data.bidangLainnya },
-            create: { namaBidang: data.bidangLainnya, createdAt: now, updatedAt: now }, update: {} });
+          const bidang = await tx.bidangKeahlian.upsert({ where: { programStudiId_namaBidang: { programStudiId: program!.id, namaBidang: data.bidangLainnya } },
+            create: { programStudiId: program!.id, namaBidang: data.bidangLainnya, createdAt: now, updatedAt: now }, update: {} });
           ids.push(bidang.id);
         } else ids.push(idSchema.parse(value));
       }

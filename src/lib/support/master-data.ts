@@ -83,8 +83,10 @@ export const getCachedLecturerOptions = cache(async () => {
 /**
  * Memoized master study fields (bidang keahlian).
  */
-export const getCachedMasterFields = cache(async () => {
+export const getCachedMasterFields = cache(async (programId: bigint | null = null) => {
   return database().bidangKeahlian.findMany({
+    where: { programStudiId: programId ?? -1n, programStudi: { aktif: true, fakultas: { aktif: true } } },
+    select: { id: true, namaBidang: true, programStudiId: true },
     orderBy: { namaBidang: "asc" },
   });
 });

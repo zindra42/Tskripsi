@@ -4,6 +4,7 @@ import { database } from "@/lib/db";
 import { publicUserSelect, type AuthenticatedSession } from "@/lib/auth/session";
 import { canAuthenticate } from "@/lib/auth/policy";
 import { canManage, type AccountPermission } from "./policy";
+import { assertProgramExpertise } from "./expertise";
 
 export class AccountError extends Error {}
 export function ensure(condition: unknown, message: string): asserts condition {
@@ -103,7 +104,9 @@ export async function assertSingleKaprodi(tx: Tx, except?: bigint, prodi?: bigin
 
 export async function syncExpertise(tx: Tx, id: bigint, bidang: bigint[]) {
   ensure(bidang.length >= 2 && bidang.length <= 3 && new Set(bidang).size === bidang.length, "Pilih 2 sampai 3 bidang keahlian berbeda.");
-  ensure(await tx.bidangKeahlian.count({ where: { id: { in: bidang } } }) === bidang.length, "Bidang keahlian tidak ditemukan.");
-  await tx.dosenKeahlian.deleteMany({ where: { dosenId: id } });
+  const lecturer = await tx.dosen.findUnique({ where: { penggunaId: id }, select: { programStudiId: true } });
+  const program = await assertProgramExpertise(tx, bidang, lecturer?.programStudiId);
+  // Retain legacy and former-program pivots as historical references.
+  await tx.dosenKeahlian.deleteMany({ where: { dosenId: id, bidang: { programStudiId: program.id } } });
   await tx.dosenKeahlian.createMany({ data: bidang.map((bidangId) => ({ dosenId: id, bidangId })) });
 }
